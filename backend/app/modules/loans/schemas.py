@@ -38,6 +38,7 @@ class ApplicationStatus(str, enum.Enum):
 class ApplicationChannel(str, enum.Enum):
     WEB = "web"
     BRANCH = "branch"
+    MOBILE = "mobile"
 
 
 class DocumentStatus(str, enum.Enum):

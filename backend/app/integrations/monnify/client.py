@@ -18,6 +18,8 @@ from app.integrations.monnify.constants import (
     DISBURSEMENT_STATUS_SUCCESS,
 )
 from app.integrations.payments.schemas import (
+    MOCK_BANKS,
+    Bank,
     DisbursementResult,
     PaymentRailError,
     ReservedAccountResult,
@@ -270,6 +272,12 @@ class MonnifyClient:
             reservation_reference=str(primary.get("reservationReference") or "") or None,
             raw=body,
         )
+
+    async def supported_banks(self) -> list[Bank]:
+        if self._use_mock:
+            return list(MOCK_BANKS)
+        body = await self._request("GET", "/api/v1/banks")
+        return [Bank(code=str(b["code"]), name=str(b["name"])) for b in body or [] if b.get("code") and b.get("name")]
 
     async def validate_bank_account(self, account_number: str, bank_code: str) -> ResolvedAccount:
         if self._use_mock:

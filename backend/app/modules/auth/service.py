@@ -125,6 +125,7 @@ class AuthService:
             phone_masked=Customer.mask_phone(phone),
             expires_in=expires_in,
             purpose="registration",
+            dev_code=self.otp.dev_code,
         )
 
     async def verify_registration_otp(
@@ -175,6 +176,7 @@ class AuthService:
             phone_masked=Customer.mask_phone(customer.phone_primary),
             expires_in=expires_in,
             purpose="registration",
+            dev_code=self.otp.dev_code,
         )
 
     async def request_login_otp(self, phone: str, *, ip: str) -> OtpSentResponse:
@@ -204,6 +206,7 @@ class AuthService:
             phone_masked=Customer.mask_phone(normalized),
             expires_in=expires_in,
             purpose="login",
+            dev_code=self.otp.dev_code,
         )
 
     async def verify_login_otp(

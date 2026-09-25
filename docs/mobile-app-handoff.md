@@ -1,9 +1,9 @@
 # GH Trust mobile app — API & design handoff
 
-For the team building the customer mobile app. The Next.js app in `src/` (repo
-root) has customer screens that serve as the visual reference; they run on local
-mock data and never call the API. Its brand, screen inventory and flow are
-summarised here; all data contracts come from the live API.
+For the team building the customer mobile app. The app itself lives in `mobile/`
+(Expo, see `mobile/README.md`) and implements everything below for v1. The Next.js
+customer screens in `src/` were the original visual reference. All data contracts
+come from the live API.
 
 **The API contract is the OpenAPI spec**: `GET {API}/openapi.json` (browse at
 `{API}/docs`) on any environment with `ENABLE_API_DOCS=true`. Generate your typed
@@ -41,6 +41,7 @@ shadow (`0 1px 3px rgba(27,47,107,.06), 0 8px 24px rgba(27,47,107,.06)`).
 
 | Screen | v | Endpoints |
 |---|---|---|
+| Bank picker + account-name check | 1 | `GET /banks`, `POST /banks/resolve` |
 | Onboarding: BVN entry | 1 | `POST /auth/register/bvn` |
 | OTP verify (register / login) | 1 | `POST /auth/register/verify-otp`, `POST /auth/login/request-otp`, `POST /auth/login/verify-otp`, `…/resend-otp` |
 | Home / dashboard (active loans, drafts, quick actions) | 1 | `GET /auth/me`, `GET /loans/me/loans`, `GET /loans/me/applications?status=draft` |
@@ -50,7 +51,8 @@ shadow (`0 1px 3px rgba(27,47,107,.06), 0 8px 24px rgba(27,47,107,.06)`).
 | Loan detail + repayment schedule | 1 | `GET /loans/me/loans/{id}` |
 | Repay | 1 | `POST /loans/me/loans/{id}/repayments` (wallet) |
 | Profile & signed-in devices | 1 | `GET /auth/me`, `GET /auth/sessions`, `DELETE /auth/sessions/{id}`, `POST /auth/logout`, `POST /auth/logout-all` |
-| Wallet (balance, fund, withdraw, payout account) | 2 | `GET /wallet`, `POST /wallet/fund`, `POST /wallet/withdraw`, `POST /wallet/payout-account` |
+| Wallet (balance, add money) | 1 (when `features.wallet`) | `GET /wallet`, `POST /wallet/fund` (Zest only, see *Wallet*) |
+| Withdraw, payout account | 2 | `GET /wallet`, `POST /wallet/fund`, `POST /wallet/withdraw`, `POST /wallet/payout-account` |
 | Savings / Investments / Group thrift | 2 | `/savings/*`, `/investments/*`, `/contributions/*` |
 | Notifications, transactions | 2 | not built server-side yet |
 
@@ -92,11 +94,16 @@ device replaces its previous session.
    `product_selection → universal_form → business_details → guarantor_collateral →
    documents → review_submit`), `required_document_types`,
    `repayment_cadence_options`, pricing. Drive the wizard from this; don't hard-code.
-2. `POST /loans/me/applications` `{product_code}` → draft, pre-filled from the BVN profile.
+2. `POST /loans/me/applications` `{product_code, channel: "mobile"}` → draft, pre-filled from the BVN profile.
 3. `PATCH /loans/me/applications/{id}` per step with `universal_form`,
    `product_data`, `guarantors`, `collaterals`. Partial updates merge.
-   - **Bank picker must supply `bank_code`** (NIP institution code) plus
-     `bank_account_number` (10 digits) — without it the loan cannot be disbursed.
+   - **Bank picker must supply `bank_code`** plus `bank_account_number` (10 digits) —
+     without it the loan cannot be disbursed. Codes are specific to the active payment
+     rail, so take them from `GET /banks` (never hard-code a list). Then call
+     `POST /banks/resolve {bank_code, account_number}` and show the returned
+     `account_name` for the customer to confirm; store it as `bank_account_name`.
+     Resolve is rate-limited per customer (10/min); `422 BANK_ACCOUNT_UNVERIFIED`
+     means the details didn't match an account.
    - Send the tenure as `product_data.tenure_months` (integer).
 4. `POST /loans/me/applications/{id}/documents/{document_type}` (multipart
    `file`): PDF/JPG/PNG, ≤ 10 MB. Content is checked, not just the extension —
@@ -106,6 +113,11 @@ device replaces its previous session.
 
 Statuses you'll see: `draft → submitted → under_review → approved →
 ready_to_disburse → disbursed`, or `rejected` (reason in the detail view).
+
+**After submission** a customer can replace only a document staff **rejected**
+(`documents[].status == "rejected"`, reason in `rejection_note`), while the application is
+`submitted`, `under_review` or `documents_incomplete` — same upload endpoint. Anything
+else returns `409 APPLICATION_NOT_EDITABLE`. The replacement goes back to staff review.
 
 ## Loans & repayments
 
@@ -117,6 +129,18 @@ interest); `monthly_payment` is the regular installment for the loan's cadence.
 Repay: `POST /loans/me/loans/{id}/repayments` `{amount}` with an
 `Idempotency-Key`. Paid from the wallet; `409 INSUFFICIENT_FUNDS` if the balance
 is short. Payments go to the oldest installment first, interest before principal.
+When `features.wallet` is off, don't offer in-app repayment: show the amount due
+and how to pay at the branch (staff record those repayments).
+
+## Wallet
+
+`GET /wallet` → `funding_mode` says how money gets in:
+
+- `permanent_dva` (Monnify, Stanbic, Paystack): the customer's own account
+  `dva_account_number` / `dva_bank_name`. Any transfer to it credits the wallet. Show it
+  with copy buttons; there is nothing to call.
+- `on_demand_dynamic` (Zest): `POST /wallet/fund {amount}` with an `Idempotency-Key`
+  returns a one-off account valid for `expires_in_minutes`.
 
 ## Errors
 

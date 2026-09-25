@@ -14,6 +14,9 @@ _INSECURE_SECRETS = frozenset(
 )
 
 
+
+SUPPORTED_SMS_PROVIDERS = frozenset({"termii"})
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -27,7 +30,7 @@ class Settings(BaseSettings):
     debug: bool = True
     api_v1_prefix: str = "/api/v1"
     secret_key: str = Field(default="dev-secret-change-in-production")
-    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081"
 
     # Auth tokens. Access tokens are short-lived JWTs; sessions are extended by
     # rotating opaque refresh tokens stored hashed in auth_sessions.
@@ -55,9 +58,13 @@ class Settings(BaseSettings):
     # spoof their IP and evade per-IP rate limits.
     trusted_proxy_count: int = 0
 
-    # SMS OTP delivery: "" (none), "termii" or "africastalking". With
-    # SMS_MOCK=false and no provider, OTP sends fail loudly instead of silently.
+    # SMS OTP delivery: "" (none) or "termii". With SMS_MOCK=false and no
+    # provider, OTP sends fail loudly instead of silently.
     sms_provider: str = ""
+    termii_api_key: str = ""
+    termii_sender_id: str = ""  # approved alphanumeric sender ID, 3-11 chars
+    termii_base_url: str = "https://v3.api.termii.com"  # shown on your Termii dashboard
+    termii_channel: str = "dnd"  # "dnd" reaches DND numbers; OTPs must use it
 
     # Mobile app remote config (GET /api/v1/app/config) and version gate.
     app_min_version_ios: str = "1.0.0"
@@ -79,6 +86,9 @@ class Settings(BaseSettings):
     dojah_app_id: str = ""
     dojah_secret_key: str = ""
     dojah_mock: bool = True  # Use sandbox mock when keys missing or mock=true
+    # Mock mode only: the phone number the sandbox BVN identity reports, so you can
+    # register in development and receive/enter codes for your own number.
+    dojah_mock_phone: str = ""
 
     # Payment rail: monnify (default), stanbic, paystack, or zest
     payment_provider: str = "monnify"
@@ -127,6 +137,9 @@ class Settings(BaseSettings):
     otp_expire_seconds: int = 600  # 10 minutes
     otp_max_attempts: int = 5
     sms_mock: bool = True  # Log OTP to console in dev
+    # Development test mode (APP_ENV=development with SMS_MOCK=true only): OTP
+    # responses include the code so a dev build of the app can fill it in.
+    otp_dev_echo: bool = True
 
     # Rate limits (requests per window). Disabled automatically when APP_ENV=development.
     rate_limit_enabled: bool = True
@@ -190,6 +203,10 @@ class Settings(BaseSettings):
             errors.append("SMS_MOCK must be false (customers would never receive OTPs)")
         elif not self.sms_provider:
             errors.append("SMS_PROVIDER must be set when SMS_MOCK=false")
+        elif self.sms_provider.strip().lower() not in SUPPORTED_SMS_PROVIDERS:
+            errors.append(f"SMS_PROVIDER '{self.sms_provider}' is not supported (use: termii)")
+        elif not (self.termii_api_key and self.termii_sender_id):
+            errors.append("Termii needs TERMII_API_KEY and TERMII_SENDER_ID")
         if self.dojah_mock or not self.dojah_enabled:
             errors.append("Dojah must be live: set DOJAH_APP_ID, DOJAH_SECRET_KEY and DOJAH_MOCK=false")
         if not self.payment_rail_enabled:
@@ -218,6 +235,11 @@ class Settings(BaseSettings):
         if provider == "stanbic":
             return self.stanbic_webhook_secret
         return self.monnify_secret_key
+
+    @property
+    def expose_dev_otp(self) -> bool:
+        """Echo OTP codes to the client: local development with mocked SMS only."""
+        return self.app_env == "development" and self.sms_mock and self.otp_dev_echo
 
     @property
     def rate_limits_active(self) -> bool:

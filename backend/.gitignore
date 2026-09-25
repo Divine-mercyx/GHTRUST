@@ -8,3 +8,6 @@ venv/
 *.egg-info/
 dist/
 uploads/
+
+# scripts/dev_server.py
+dev_local.db

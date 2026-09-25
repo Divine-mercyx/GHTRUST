@@ -8,6 +8,8 @@ import structlog
 from app.integrations.retry import transient_retry
 
 from app.core.config import settings
+from app.integrations.payments.schemas import MOCK_BANKS, Bank
+from app.integrations.payments.schemas import ResolvedAccount as RailResolvedAccount
 from app.integrations.paystack.constants import (
     TRANSACTION_STATUS_SUCCESS,
     TRANSFER_STATUS_SUCCESS,
@@ -382,6 +384,18 @@ class PaystackClient:
             ]
         data = await self._request("GET", "/bank", params={"country": country})
         return [PaystackBank.model_validate(item) for item in data or []]
+
+    async def supported_banks(self) -> list[Bank]:
+        if self._use_mock:
+            return list(MOCK_BANKS)
+        return [Bank(code=b.code, name=b.name) for b in await self.list_banks() if b.active]
+
+    async def validate_bank_account(self, account_number: str, bank_code: str) -> RailResolvedAccount:
+        """Rail-interface name enquiry (disbursement + the app's account check)."""
+        resolved = await self.resolve_account(account_number, bank_code)
+        return RailResolvedAccount(
+            account_number=resolved.account_number, account_name=resolved.account_name, bank_code=bank_code
+        )
 
     async def resolve_account(self, account_number: str, bank_code: str) -> ResolvedAccount:
         if self._use_mock:

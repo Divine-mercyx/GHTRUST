@@ -72,6 +72,8 @@ def _test_env(monkeypatch):
     monkeypatch.setenv("MONNIFY_CONTRACT_CODE", "1234567890")
     monkeypatch.setenv("ZEST_AUTH_ENCRYPTION_IV", "3A4CD38XVS621KZ6")
     monkeypatch.setenv("SMS_MOCK", "true")
+    # Never inherit a developer's local test-mode phone from backend/.env.
+    monkeypatch.setenv("DOJAH_MOCK_PHONE", "")
     monkeypatch.setenv("SECRET_KEY", "test-secret-key-for-jwt-and-otp-hashing")
     monkeypatch.setenv("OTP_LENGTH", "6")
     monkeypatch.setenv("OTP_EXPIRE_SECONDS", "600")

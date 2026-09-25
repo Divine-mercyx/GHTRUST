@@ -67,3 +67,40 @@ class WalletBalanceResult(BaseModel):
     available_balance: Decimal
     ledger_balance: Decimal | None = None
     currency: str = "NGN"
+
+
+class Bank(BaseModel):
+    """A destination bank for transfers; `code` is whatever the active rail expects."""
+
+    code: str
+    name: str
+
+
+# Served by every rail in mock mode (CBN codes, as Paystack/Monnify use).
+MOCK_BANKS: tuple[Bank, ...] = tuple(
+    Bank(code=code, name=name)
+    for code, name in (
+        ("044", "Access Bank"),
+        ("023", "Citibank Nigeria"),
+        ("050", "Ecobank Nigeria"),
+        ("070", "Fidelity Bank"),
+        ("011", "First Bank of Nigeria"),
+        ("214", "First City Monument Bank"),
+        ("058", "Guaranty Trust Bank"),
+        ("030", "Heritage Bank"),
+        ("082", "Keystone Bank"),
+        ("50211", "Kuda Bank"),
+        ("50515", "Moniepoint MFB"),
+        ("999992", "OPay"),
+        ("999991", "PalmPay"),
+        ("076", "Polaris Bank"),
+        ("221", "Stanbic IBTC Bank"),
+        ("068", "Standard Chartered Bank"),
+        ("232", "Sterling Bank"),
+        ("032", "Union Bank of Nigeria"),
+        ("033", "United Bank for Africa"),
+        ("215", "Unity Bank"),
+        ("035", "Wema Bank"),
+        ("057", "Zenith Bank"),
+    )
+)

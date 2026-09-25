@@ -87,6 +87,11 @@ class OtpSentResponse(BaseModel):
     phone_masked: str
     expires_in: int
     purpose: str  # registration | login
+    dev_code: str | None = Field(
+        None,
+        description="Local development with mocked SMS only: the code, so a dev build can fill it in. "
+        "Never present when SMS is real or outside APP_ENV=development.",
+    )
 
 
 class CustomerProfileResponse(BaseModel):

@@ -26,6 +26,8 @@ class RateLimiter:
 
     def __init__(self, redis: Redis):
         self.redis = redis
+        # Set by send() in local development only (see Settings.expose_dev_otp).
+        self.dev_code: str | None = None
 
     async def hit(self, key: str, limit: int, window_seconds: int) -> None:
         if not get_settings().rate_limits_active:
@@ -115,6 +117,7 @@ class OtpService:
             pipe.setex(key, settings.otp_expire_seconds, _hash_otp(otp))
             pipe.setex(attempts_key, settings.otp_expire_seconds, "0")
             await pipe.execute()
+        self.dev_code = otp if settings.expose_dev_otp else None
         return settings.otp_expire_seconds
 
     async def verify(self, purpose: str, identifier: str, otp: str) -> bool:

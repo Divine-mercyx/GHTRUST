@@ -397,7 +397,9 @@ class LoanService:
         upload: UploadFile,
     ) -> LoanApplicationDetailResponse:
         application = await self._get_application_for_customer(application_id, customer_id)
-        self._ensure_editable(application)
+        replacing_rejected = application.status != ApplicationStatus.DRAFT
+        if replacing_rejected:
+            self._ensure_reupload_allowed(application, document_type)
 
         if document_type not in application.product.required_document_types:
             raise AppError(
@@ -435,7 +437,47 @@ class LoanService:
         )
         await self.db.flush()
         await self.db.refresh(application, attribute_names=["documents", "guarantors", "collaterals", "product"])
+        if replacing_rejected:
+            await self._after_reupload(application, customer_id, document_type)
         return await self.get_application(application_id, customer_id=customer_id)
+
+    # After submission a customer may replace only what staff rejected, while it is still in review.
+    _REUPLOAD_STATUSES = frozenset(
+        {ApplicationStatus.SUBMITTED, ApplicationStatus.UNDER_REVIEW, ApplicationStatus.DOCUMENTS_INCOMPLETE}
+    )
+
+    def _ensure_reupload_allowed(self, application: LoanApplication, document_type: str) -> None:
+        rejected = any(
+            d.document_type == document_type and d.status == DocumentStatus.REJECTED for d in application.documents
+        )
+        if application.status not in self._REUPLOAD_STATUSES or not rejected:
+            raise AppError(
+                status.HTTP_409_CONFLICT,
+                ErrorCode.APPLICATION_NOT_EDITABLE,
+                "Only documents we've asked you to replace can be uploaded now.",
+            )
+
+    async def _after_reupload(self, application: LoanApplication, customer_id: str, document_type: str) -> None:
+        customer = await self.db.get(Customer, customer_id)
+        if customer:
+            await ApplicationAuditService(self.db).log_customer(
+                application.id,
+                AuditEventType.DOCUMENT_UPLOADED,
+                customer,
+                message=f"Customer replaced {DOCUMENT_LABELS.get(document_type, document_type)}",
+                metadata={"document_type": document_type},
+            )
+        still_rejected = any(d.status == DocumentStatus.REJECTED for d in application.documents)
+        if application.status == ApplicationStatus.DOCUMENTS_INCOMPLETE and not still_rejected:
+            application.status = ApplicationStatus.UNDER_REVIEW
+            await self._log_status(
+                application,
+                ApplicationStatus.DOCUMENTS_INCOMPLETE.value,
+                ApplicationStatus.UNDER_REVIEW.value,
+                note="Customer replaced the rejected documents",
+                customer_id=customer_id,
+            )
+        await self.db.flush()
 
     async def submit_application(
         self,

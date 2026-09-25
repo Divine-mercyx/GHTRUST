@@ -33,6 +33,8 @@ from app.integrations.retry import transient_retry
 
 from app.core.config import settings
 from app.integrations.payments.schemas import (
+    MOCK_BANKS,
+    Bank,
     DisbursementResult,
     PaymentRailError,
     ReservedAccountResult,
@@ -43,6 +45,7 @@ from app.integrations.payments.schemas import (
 )
 from app.integrations.stanbic.constants import (
     ACCOUNT_STATUS_ACTIVE,
+    PATH_BANKS,
     PATH_CREATE_ACCOUNT,
     PATH_DEACTIVATE_ACCOUNT,
     PATH_GET_ACCOUNT,
@@ -346,6 +349,21 @@ class StanbicClient:
         return True
 
     # ── D1: NIP name enquiry ────────────────────────────────────────────────
+
+    # ── D2: bank picker ─────────────────────────────────────────────────────
+
+    async def supported_banks(self) -> list[Bank]:
+        if self._use_mock:
+            return list(MOCK_BANKS)
+        body = await self._request("GET", PATH_BANKS)
+        items = body.get("banks", body) if isinstance(body, dict) else body
+        banks = []
+        for b in items or []:
+            code = b.get("nipCode") or b.get("bankCode") or b.get("code")
+            name = b.get("bankName") or b.get("name")
+            if code and name:
+                banks.append(Bank(code=str(code), name=str(name)))
+        return banks
 
     async def validate_bank_account(self, account_number: str, bank_code: str) -> ResolvedAccount:
         if self._use_mock:

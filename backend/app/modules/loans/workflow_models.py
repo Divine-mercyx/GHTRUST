@@ -48,6 +48,7 @@ class AuditEventType(str, enum.Enum):
     STATUS_CHANGED = "status_changed"
     DOCUMENT_VERIFIED = "document_verified"
     DOCUMENT_REJECTED = "document_rejected"
+    DOCUMENT_UPLOADED = "document_uploaded"
     DISBURSED = "disbursed"
     WORKFLOW_ASSIGNED = "workflow_assigned"
 

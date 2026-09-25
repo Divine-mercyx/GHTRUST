@@ -11,6 +11,7 @@ from app.integrations.retry import transient_retry
 
 from app.core.config import settings
 from app.integrations.payments.schemas import (
+    Bank,
     DisbursementResult,
     PaymentRailError,
     ReservedAccountResult,
@@ -363,6 +364,9 @@ class ZestClient:
             account_reference=transaction_reference,
             raw=body,
         )
+
+    async def supported_banks(self) -> list[Bank]:
+        raise PaymentRailError("Zest bank list is not available on the VA API", status_code=501)
 
     async def validate_bank_account(self, account_number: str, bank_code: str) -> ResolvedAccount:
         raise PaymentRailError("Zest bank account validation is not available on the VA API", status_code=501)

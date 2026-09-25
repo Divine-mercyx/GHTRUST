@@ -57,7 +57,10 @@ class DojahClient:
     async def lookup_bvn_advanced(self, bvn: str) -> DojahBvnEntity:
         if settings.dojah_mock or not settings.dojah_enabled:
             logger.info("dojah_mock_lookup", bvn=bvn[:3] + "****")
-            entity = MOCK_ENTITY.model_copy(update={"bvn": bvn})
+            update = {"bvn": bvn}
+            if settings.dojah_mock_phone:
+                update["phone_number1"] = settings.dojah_mock_phone
+            entity = MOCK_ENTITY.model_copy(update=update)
             return entity
 
         url = f"{self.base_url}/api/v1/kyc/bvn/advance"

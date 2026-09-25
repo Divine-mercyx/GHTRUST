@@ -1,0 +1,54 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "backend/scripts/run_api.py"
+      ],
+      "port": 8000
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "start"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "web-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "api-dev",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "backend/scripts/dev_server.py",
+        "--wallet"
+      ],
+      "port": 8000
+    },
+    {
+      "name": "mobile-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "mobile",
+        "run",
+        "web",
+        "--",
+        "--port",
+        "8081"
+      ],
+      "port": 8081
+    }
+  ]
+}
