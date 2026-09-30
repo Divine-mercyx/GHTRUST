@@ -107,12 +107,13 @@ wallet is never credited.
 
 ## 4. First deploy
 
-1. Deploy **api**. The pre-deploy command migrates the database, then seeds products, the
-   first staff admin (`SEED_SUPER_ADMIN_*`) and any demo customers. The seed never
-   duplicates, so it's safe on every deploy. Without it there's no staff account and
-   portal sign-in answers "Staff account not found".
-2. Changed `SEED_SUPER_ADMIN_*` or `DEMO_*`? Redeploy, or run `python scripts/seed.py`
-   from the api service shell.
+1. Deploy **api**. The pre-deploy command migrates the database and seeds products and
+   loan workflows (the seed never duplicates, so it's safe on every deploy).
+2. The first staff admin (`SEED_SUPER_ADMIN_*`) and demo customers (`DEMO_PHONES`) are
+   created by the API itself on every start, so they exist even without the seed. Change
+   `SEED_SUPER_ADMIN_PHONE` and the next start moves that admin (matched by email) to the
+   new number. If sign-in says "Staff account not found", look for
+   `configured_accounts_failed` in the api log.
 3. Deploy **worker** and **beat**.
 4. Check `https://<api domain>/api/v1/health/ready` returns `{"status":"ready"}`.
 
