@@ -1,7 +1,7 @@
 import structlog
 from fastapi import HTTPException, status
 from redis.asyncio import Redis
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -342,12 +342,25 @@ async def seed_super_admin(
     email: str,
     phone: str,
 ) -> Staff:
+    """
+    Make sure the admin named by SEED_SUPER_ADMIN_* can sign in. Idempotent.
+
+    Keyed on the configured phone and email, not on "any super admin exists": after
+    SEED_SUPER_ADMIN_PHONE changes (e.g. a lost number), the next run moves that admin
+    to the new phone instead of silently leaving nobody able to sign in with it.
+    """
     normalized_phone = Customer.normalize_phone(phone)
     email = email.lower().strip()
 
-    existing = await db.execute(select(Staff).where(Staff.is_super_admin.is_(True)))
-    staff = existing.scalar_one_or_none()
+    existing = await db.execute(
+        select(Staff).where(or_(Staff.phone == normalized_phone, Staff.email == email))
+    )
+    staff = existing.scalars().first()
     if staff:
+        if staff.phone != normalized_phone:
+            logger.warning("super_admin_phone_updated", staff_id=staff.id, email=staff.email)
+            staff.phone = normalized_phone
+            await db.flush()
         return staff
 
     await ensure_super_admin_role(db)
