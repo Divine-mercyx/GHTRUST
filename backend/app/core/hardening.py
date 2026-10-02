@@ -174,11 +174,12 @@ class BodySizeLimitMiddleware:
         headers = {k.lower(): v for k, v in scope.get("headers", [])}
         content_type = headers.get(b"content-type", b"").decode("latin-1").lower()
         multipart = content_type.startswith("multipart/form-data")
-        limit = (
-            settings.max_upload_size_mb * 1024 * 1024 + 64 * 1024  # file + form overhead
-            if multipart
-            else settings.max_json_body_kb * 1024
-        )
+        if multipart:
+            limit = settings.max_upload_size_mb * 1024 * 1024 + 64 * 1024  # file + form overhead
+        elif scope.get("path", "") == f"{settings.api_v1_prefix}/auth/register/selfie":
+            limit = settings.max_selfie_body_mb * 1024 * 1024
+        else:
+            limit = settings.max_json_body_kb * 1024
 
         declared = headers.get(b"content-length")
         if declared is not None and declared.isdigit() and int(declared) > limit:

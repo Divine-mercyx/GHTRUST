@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 export type UploadFile = { uri: string; name: string; type: string };
 export type Source = 'camera' | 'library' | 'file';
 
-const MAX_BYTES = 10 * 1024 * 1024; // API limit
+const MAX_BYTES = 30 * 1024 * 1024; // API limit (MAX_UPLOAD_SIZE_MB)
 const LONG_EDGE = 1800; // readable for staff, small enough for mobile data
 
 export class PickError extends Error {}
@@ -31,7 +31,7 @@ export async function pickFile(source: Source): Promise<UploadFile | null> {
     });
     if (res.canceled || !res.assets?.[0]) return null;
     const a = res.assets[0];
-    if (a.size && a.size > MAX_BYTES) throw new PickError('That file is larger than 10 MB. Choose a smaller file.');
+    if (a.size && a.size > MAX_BYTES) throw new PickError('That file is larger than 30 MB. Choose a smaller file.');
     const type = a.mimeType ?? (a.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
     if (type.startsWith('image/')) return compress(a.uri, 4000, 4000).catch(() => ({ uri: a.uri, name: a.name, type }));
     return { uri: a.uri, name: a.name, type };

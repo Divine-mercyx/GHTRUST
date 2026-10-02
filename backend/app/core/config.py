@@ -219,9 +219,12 @@ class Settings(BaseSettings):
     default_branch: str = "Lagos Main"
 
     upload_dir: str = "uploads"
-    max_upload_size_mb: int = 10
+    max_upload_size_mb: int = 30
     # JSON bodies above this are refused before parsing (uploads use max_upload_size_mb).
     max_json_body_kb: int = 256
+    # The sign-up selfie sends several camera frames as base64 JSON, far over the
+    # general JSON limit; only that endpoint gets this allowance.
+    max_selfie_body_mb: int = 30
 
     # Error tracking. Empty = disabled. Events carry no request bodies or PII.
     sentry_dsn: str = ""

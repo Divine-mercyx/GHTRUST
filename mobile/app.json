@@ -9,7 +9,7 @@
     "scheme": "ghtrust",
     "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "bundleIdentifier": "ng.ghtrust.app",
       "supportsTablet": false,
       "config": {

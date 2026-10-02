@@ -107,10 +107,10 @@ const COPY: Record<string, string> = {
   APPLICATION_NOT_EDITABLE: "This application can't be changed any more. Only documents we've asked you to replace can be uploaded.",
   INVALID_STATUS_TRANSITION: "This application can't be changed right now.",
   DOCUMENT_TYPE_NOT_ALLOWED: "This document isn't needed for your application.",
-  DOCUMENT_INVALID: "We couldn't read that file. Upload a clear PDF, JPG or PNG under 10 MB.",
+  DOCUMENT_INVALID: "We couldn't read that file. Upload a clear PDF, JPG or PNG under 30 MB.",
   DOCUMENTS_NOT_VERIFIED: 'Your documents are still being reviewed.',
   // Generic codes the server uses when nothing more specific applies
-  PAYLOAD_TOO_LARGE: 'That file is too large. Please use one under 10 MB.',
+  PAYLOAD_TOO_LARGE: 'That file is too large. Please use one under 30 MB.',
   UNSUPPORTED_MEDIA_TYPE: 'That file type isn’t supported. Use a PDF, JPG or PNG.',
   NOT_IMPLEMENTED: "This isn't available yet.",
 };
