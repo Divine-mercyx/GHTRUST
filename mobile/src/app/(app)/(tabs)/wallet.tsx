@@ -11,14 +11,19 @@ import { Banner, CardSkeleton, ErrorState } from '@/components/States';
 import { Text } from '@/components/Text';
 import { fromTransaction, shortAccount } from '@/lib/activity';
 import { naira } from '@/lib/format';
-import { useTransactions, useWallet } from '@/lib/queries';
+import { useApplications, useTransactions, useWallet } from '@/lib/queries';
+import { applicationStatus } from '@/lib/status';
 import { colors, font, radius, shadow, space } from '@/theme/tokens';
 
 const RECENT = 4;
+// Approved but not paid out yet: the money is coming to the wallet.
+const PAYING_OUT = new Set(['approved', 'offer_sent', 'offer_accepted', 'product_gate_pending', 'processing_fee_paid', 'ready_to_disburse']);
 
 export default function WalletTab() {
   const wallet = useWallet();
   const history = useTransactions();
+  const applications = useApplications();
+  const incoming = (applications.data?.items ?? []).filter((a) => PAYING_OUT.has(a.status));
   const w = wallet.data;
   const recent = useMemo(
     () => (history.data?.pages[0]?.items ?? []).slice(0, RECENT).map(fromTransaction),
@@ -69,6 +74,24 @@ export default function WalletTab() {
             </View>
           </View>
 
+          {incoming.length > 0 ? (
+            <>
+              <SectionHeader title="Coming to your wallet" />
+              <Card style={{ paddingVertical: space.xs }}>
+                {incoming.map((a, i) => (
+                  <Row
+                    key={a.id}
+                    icon="time-outline"
+                    title={`${naira(a.approved_amount ?? a.requested_amount)} · ${a.product_name}`}
+                    subtitle={`${applicationStatus(a.status).label}. Paid into your wallet once it's sent.`}
+                    onPress={() => router.push(`/applications/${a.id}`)}
+                    last={i === incoming.length - 1}
+                  />
+                ))}
+              </Card>
+            </>
+          ) : null}
+
           <SectionHeader
             title="Recent transactions"
             action={
@@ -88,7 +111,7 @@ export default function WalletTab() {
           ) : recent.length === 0 ? (
             <Card>
               <Text variant="small" muted>
-                No transactions yet. Money you add, repay or withdraw will show up here.
+                No transactions yet. Loans paid to you, money you add, repayments and withdrawals will show up here.
               </Text>
             </Card>
           ) : (

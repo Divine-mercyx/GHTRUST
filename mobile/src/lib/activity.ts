@@ -27,6 +27,7 @@ const TX_STATUS: Record<WalletTransaction['status'], { label: string; tone: Tone
 
 const TX_ICON: Record<WalletTransaction['kind'], keyof typeof Ionicons.glyphMap> = {
   funding: 'arrow-down',
+  loan_payout: 'cash',
   withdrawal: 'arrow-up',
   repayment: 'checkmark-done',
 };
@@ -40,6 +41,7 @@ export const transactionIcon = (k: WalletTransaction['kind']) => TX_ICON[k] ?? '
 /** Subtitle for a wallet transaction: the loan it paid, the bank it went to, or how it came in. */
 export function transactionDetail(tx: WalletTransaction): string {
   if (tx.kind === 'repayment') return tx.loan_product ? productName(tx.loan_product) : 'From your wallet';
+  if (tx.kind === 'loan_payout') return tx.loan_product ? productName(tx.loan_product) : 'Loan';
   return tx.detail ? shortAccount(tx.detail) : '';
 }
 

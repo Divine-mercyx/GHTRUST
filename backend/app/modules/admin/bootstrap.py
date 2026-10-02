@@ -6,7 +6,7 @@ created only by `python scripts/seed.py`. A host that never ran it (no pre-deplo
 command, no shell) booted "healthy" while portal sign-in said "Staff account not found".
 Both steps are idempotent, so running them on every start is safe.
 
-Products and loan workflows stay in the seed script.
+Default loan products and their workflows are ensured the same way (ensure_loan_catalogue).
 """
 
 import structlog
@@ -15,6 +15,28 @@ from sqlalchemy.exc import IntegrityError
 from app.core.config import get_settings
 
 logger = structlog.get_logger()
+
+
+async def ensure_loan_catalogue(session_factory=None) -> None:
+    """
+    The default loan products and their approval workflows. Without them the app's
+    "Choose a loan" list is empty. Existing products (and any staff changes to them)
+    are never touched; products staff create are listed alongside these.
+    """
+    from app.core.database import AsyncSessionLocal
+    from app.modules.loans.service import seed_loan_products
+    from app.modules.loans.workflow_seed import seed_default_workflows
+
+    async with (session_factory or AsyncSessionLocal)() as session:
+        try:
+            await seed_loan_products(session)
+            await seed_default_workflows(session)
+            await session.commit()
+        except IntegrityError:
+            await session.rollback()  # another worker process seeded them first
+        except Exception:
+            await session.rollback()
+            logger.exception("loan_catalogue_seed_failed")
 
 
 async def ensure_configured_accounts(session_factory=None) -> None:

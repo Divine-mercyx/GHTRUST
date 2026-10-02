@@ -579,6 +579,54 @@
      }
     ]
    },
+   "delete": {
+    "tags": [
+     "Account"
+    ],
+    "summary": "Delete my account",
+    "description": "Permanently delete the signed-in customer's account. Needs the sign-in PIN and the word\nDELETE. Every session ends at once. Refused (409) while anything is still open.",
+    "operationId": "delete_my_account_api_v1_auth_me_delete",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DeleteAccountRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountDeletedResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "A loan, application, wallet balance or withdrawal is still open"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   },
    "patch": {
     "tags": [
      "Authentication"
@@ -623,6 +671,215 @@
       "HTTPBearer": []
      }
     ]
+   }
+  },
+  "/api/v1/auth/me/photo": {
+   "get": {
+    "tags": [
+     "Account"
+    ],
+    "summary": "Profile photo",
+    "description": "The photo the customer chose, else the photo on their BVN record.",
+    "operationId": "get_profile_photo_api_v1_auth_me_photo_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ProfilePhotoResponse"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "Account"
+    ],
+    "summary": "Change profile photo",
+    "operationId": "update_profile_photo_api_v1_auth_me_photo_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/UpdatePhotoRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CustomerProfileResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "Account"
+    ],
+    "summary": "Remove chosen photo",
+    "description": "Go back to the BVN photo.",
+    "operationId": "remove_profile_photo_api_v1_auth_me_photo_delete",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CustomerProfileResponse"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/auth/me/account-deletion": {
+   "get": {
+    "tags": [
+     "Account"
+    ],
+    "summary": "Can this account be deleted, and what happens",
+    "operationId": "deletion_check_api_v1_auth_me_account_deletion_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DeletionCheckResponse"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/auth/account-deletion/request-otp": {
+   "post": {
+    "tags": [
+     "Account"
+    ],
+    "summary": "Web account deletion: send a code",
+    "description": "Texts a code to the account's phone. Says the same thing whether or not an account exists.",
+    "operationId": "web_deletion_code_api_v1_auth_account_deletion_request_otp_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WebDeletionCodeRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/app__modules__auth__schemas__OtpSentResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/auth/account-deletion/confirm": {
+   "post": {
+    "tags": [
+     "Account"
+    ],
+    "summary": "Web account deletion: confirm",
+    "description": "Delete the account the phone number belongs to, with its SMS code and sign-in PIN.",
+    "operationId": "web_delete_account_api_v1_auth_account_deletion_confirm_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WebDeleteAccountRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountDeletedResponse"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "A loan, application, wallet balance or withdrawal is still open"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
    }
   },
   "/api/v1/auth/pin": {
@@ -5737,6 +5994,63 @@
     }
    }
   },
+  "/api/v1/support/tickets/{ticket_id}/messages": {
+   "post": {
+    "tags": [
+     "Support"
+    ],
+    "summary": "Reply in one of my requests",
+    "operationId": "reply_to_ticket_api_v1_support_tickets__ticket_id__messages_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "ticket_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ticket Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReplyRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TicketResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/admin/support/tickets": {
    "get": {
     "tags": [
@@ -6106,6 +6420,26 @@
     ],
     "title": "AcceptOfferRequest"
    },
+   "AccountDeletedResponse": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "const": "deleted",
+      "title": "Status",
+      "default": "deleted"
+     },
+     "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Deleted At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "deleted_at"
+    ],
+    "title": "AccountDeletedResponse"
+   },
    "AdminDashboardResponse": {
     "properties": {
      "total_applications": {
@@ -6334,6 +6668,23 @@
       "format": "date-time",
       "title": "Created At"
      },
+     "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Updated At"
+     },
+     "awaiting_reply": {
+      "type": "boolean",
+      "title": "Awaiting Reply"
+     },
+     "messages": {
+      "items": {
+       "$ref": "#/components/schemas/MessageResponse"
+      },
+      "type": "array",
+      "title": "Messages",
+      "default": []
+     },
      "customer_id": {
       "type": "string",
       "title": "Customer Id"
@@ -6404,6 +6755,8 @@
      "reply",
      "replied_at",
      "created_at",
+     "updated_at",
+     "awaiting_reply",
      "customer_id",
      "customer_name",
      "customer_phone",
@@ -8326,6 +8679,24 @@
       "title": "Transfers Blocked Until",
       "description": "Money can't leave the account before this time (set after a lost-phone sign-in)."
      },
+     "has_custom_photo": {
+      "type": "boolean",
+      "title": "Has Custom Photo",
+      "description": "The customer chose a profile photo (else /auth/me/photo serves the BVN photo).",
+      "default": false
+     },
+     "photo_version": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo Version",
+      "description": "Changes whenever the profile photo changes; use it to refresh."
+     },
      "legal_pending": {
       "items": {
        "type": "string"
@@ -8413,7 +8784,8 @@
      "pending_otp",
      "active",
      "suspended",
-     "inactive"
+     "inactive",
+     "deleted"
     ],
     "title": "CustomerStatus"
    },
@@ -8615,6 +8987,83 @@
      "count"
     ],
     "title": "DashboardStatusCount"
+   },
+   "DeleteAccountRequest": {
+    "properties": {
+     "pin": {
+      "type": "string",
+      "maxLength": 8,
+      "minLength": 4,
+      "title": "Pin",
+      "description": "The 6-digit sign-in PIN"
+     },
+     "confirmation": {
+      "type": "string",
+      "title": "Confirmation",
+      "description": "Must be 'DELETE'"
+     }
+    },
+    "type": "object",
+    "required": [
+     "pin",
+     "confirmation"
+    ],
+    "title": "DeleteAccountRequest"
+   },
+   "DeletionBlocker": {
+    "properties": {
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "message": {
+      "type": "string",
+      "title": "Message"
+     }
+    },
+    "type": "object",
+    "required": [
+     "code",
+     "message"
+    ],
+    "title": "DeletionBlocker"
+   },
+   "DeletionCheckResponse": {
+    "properties": {
+     "can_delete": {
+      "type": "boolean",
+      "title": "Can Delete"
+     },
+     "blockers": {
+      "items": {
+       "$ref": "#/components/schemas/DeletionBlocker"
+      },
+      "type": "array",
+      "title": "Blockers"
+     },
+     "will_delete": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Will Delete"
+     },
+     "will_keep": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Will Keep"
+     }
+    },
+    "type": "object",
+    "required": [
+     "can_delete",
+     "blockers",
+     "will_delete",
+     "will_keep"
+    ],
+    "title": "DeletionCheckResponse"
    },
    "DemographicBucket": {
     "properties": {
@@ -10859,6 +11308,44 @@
     "type": "object",
     "title": "MarkReadRequest"
    },
+   "MessageResponse": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "author": {
+      "type": "string",
+      "enum": [
+       "customer",
+       "staff"
+      ],
+      "title": "Author"
+     },
+     "author_name": {
+      "type": "string",
+      "title": "Author Name"
+     },
+     "body": {
+      "type": "string",
+      "title": "Body"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "author",
+     "author_name",
+     "body",
+     "created_at"
+    ],
+    "title": "MessageResponse"
+   },
    "NotificationPage": {
     "properties": {
      "items": {
@@ -11181,7 +11668,8 @@
      "monnify",
      "zest",
      "stanbic",
-     "manual"
+     "manual",
+     "wallet"
     ],
     "title": "PaymentProvider"
    },
@@ -11466,6 +11954,51 @@
     ],
     "title": "PipelineStageSummary"
    },
+   "ProfilePhotoResponse": {
+    "properties": {
+     "image": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Image",
+      "description": "Base64 JPEG or PNG; null when there's no photo"
+     },
+     "content_type": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Content Type"
+     },
+     "source": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "custom",
+         "bvn"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Source",
+      "description": "'custom' if the customer chose it, 'bvn' if it's from their BVN record"
+     }
+    },
+    "type": "object",
+    "title": "ProfilePhotoResponse"
+   },
    "PushTokenRequest": {
     "properties": {
      "token": {
@@ -11682,6 +12215,21 @@
      "status"
     ],
     "title": "RepaymentScheduleItem"
+   },
+   "ReplyRequest": {
+    "properties": {
+     "body": {
+      "type": "string",
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Body"
+     }
+    },
+    "type": "object",
+    "required": [
+     "body"
+    ],
+    "title": "ReplyRequest"
    },
    "ResendRegistrationOtpRequest": {
     "properties": {
@@ -12886,6 +13434,23 @@
       "type": "string",
       "format": "date-time",
       "title": "Created At"
+     },
+     "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Updated At"
+     },
+     "awaiting_reply": {
+      "type": "boolean",
+      "title": "Awaiting Reply"
+     },
+     "messages": {
+      "items": {
+       "$ref": "#/components/schemas/MessageResponse"
+      },
+      "type": "array",
+      "title": "Messages",
+      "default": []
      }
     },
     "type": "object",
@@ -12899,7 +13464,9 @@
      "status",
      "reply",
      "replied_at",
-     "created_at"
+     "created_at",
+     "updated_at",
+     "awaiting_reply"
     ],
     "title": "TicketResponse"
    },
@@ -13586,6 +14153,20 @@
     ],
     "title": "UpdatePayoutAccountRequest"
    },
+   "UpdatePhotoRequest": {
+    "properties": {
+     "image": {
+      "type": "string",
+      "title": "Image",
+      "description": "Base64 JPEG or PNG, up to 5 MB"
+     }
+    },
+    "type": "object",
+    "required": [
+     "image"
+    ],
+    "title": "UpdatePhotoRequest"
+   },
    "UpdateTicketRequest": {
     "properties": {
      "status": {
@@ -14019,6 +14600,7 @@
       "type": "string",
       "enum": [
        "funding",
+       "loan_payout",
        "repayment",
        "withdrawal"
       ],
@@ -14134,6 +14716,57 @@
     ],
     "title": "WalletTransactionResponse",
     "description": "One movement of money in or out of the wallet, as the customer sees it."
+   },
+   "WebDeleteAccountRequest": {
+    "properties": {
+     "pin": {
+      "type": "string",
+      "maxLength": 8,
+      "minLength": 4,
+      "title": "Pin",
+      "description": "The 6-digit sign-in PIN"
+     },
+     "confirmation": {
+      "type": "string",
+      "title": "Confirmation",
+      "description": "Must be 'DELETE'"
+     },
+     "phone": {
+      "type": "string",
+      "maxLength": 20,
+      "minLength": 10,
+      "title": "Phone"
+     },
+     "otp": {
+      "type": "string",
+      "maxLength": 8,
+      "minLength": 4,
+      "title": "Otp"
+     }
+    },
+    "type": "object",
+    "required": [
+     "pin",
+     "confirmation",
+     "phone",
+     "otp"
+    ],
+    "title": "WebDeleteAccountRequest"
+   },
+   "WebDeletionCodeRequest": {
+    "properties": {
+     "phone": {
+      "type": "string",
+      "maxLength": 20,
+      "minLength": 10,
+      "title": "Phone"
+     }
+    },
+    "type": "object",
+    "required": [
+     "phone"
+    ],
+    "title": "WebDeletionCodeRequest"
    },
    "WebhookAckResponse": {
     "properties": {

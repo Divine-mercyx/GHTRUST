@@ -68,7 +68,8 @@ Generate secrets with `python -c "import secrets; print(secrets.token_urlsafe(48
 | `OTP_TEST_ECHO` | `false` (codes are never echoed in production anyway, but keep it off) |
 | `PAYMENT_PROVIDER` | `monnify`, `paystack`, `stanbic` or `zest` |
 | provider keys | e.g. Monnify: `MONNIFY_API_KEY`, `MONNIFY_SECRET_KEY`, `MONNIFY_CONTRACT_CODE`, `MONNIFY_MOCK=false`. The webhook secret is the provider's secret key, except Stanbic (`STANBIC_WEBHOOK_SECRET`) |
-| `FEATURE_FLAGS` | `wallet` to launch with the wallet; empty for loans only. Savings, investments, contributions and food basket are refused until they are built |
+| `FEATURE_FLAGS` | `wallet` to launch with the wallet: loans are then **paid into the wallet** and customers withdraw to any bank. Empty for loans only (paid straight to the bank account in the application). Savings, investments, contributions and food basket are refused until they are built |
+| `PUSH_MOCK` / `EXPO_PUSH_ACCESS_TOKEN` | `false` to send push notifications (worker + beat must run; the job sends every minute). The token is optional (Expo push security). Android also needs Firebase credentials in EAS, see section 6 |
 | `SEED_SUPER_ADMIN_NAME`, `…_EMAIL`, `…_PHONE` | the first staff admin (see step 4) |
 | `DEMO_PHONES`, `DEMO_OTP`, `DEMO_LOGIN_PIN`, `DEMO_TRANSACTION_PIN` | optional: the app-review account (below) |
 | `SUPPORT_PHONE`, `SUPPORT_EMAIL`, `SUPPORT_WHATSAPP`, `SUPPORT_HOURS` | shown in the app's Help screen |
@@ -143,6 +144,26 @@ npx eas-cli@latest submit --profile production --platform all
 Launch through the stores' test tracks first: Play **internal testing → closed testing →
 production**; iOS **TestFlight → review**. JavaScript-only fixes after that ship with
 `npm run update:production` (see `mobile/README.md`).
+
+### Push notifications on Android
+
+Expo sends Android pushes through Firebase Cloud Messaging, so EAS needs your Firebase
+project's credentials once:
+
+1. Firebase console → create a project → add an Android app with package `ng.ghtrust.app`
+   → download `google-services.json`.
+2. Firebase → Project settings → Service accounts → generate a private key (JSON).
+3. `npx eas-cli@latest credentials` → Android → production → Google Service Account → FCM V1
+   → upload that key.
+4. Put `google-services.json` in `mobile/` and set `"googleServicesFile": "./google-services.json"`
+   under `android` in `app.json`, then build again.
+
+In-app notifications work without any of this; push needs it.
+
+### Account deletion URL (Google Play)
+
+Play Console → App content → Data safety → account deletion: enter
+`https://<admin site>/delete-account`. See `docs/account-deletion.md`.
 
 ## 7. Smoke test (staging first, then production)
 

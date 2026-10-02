@@ -12,6 +12,7 @@ import { CustomersPage } from './pages/CustomersPage'
 import { CustomerDetailPage } from './pages/CustomerDetailPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { DeleteAccountPage } from './pages/DeleteAccountPage'
 
 function PublicOnly({ children }: { children: React.ReactNode }) {
   const { token, loading } = useAuth()
@@ -33,6 +34,8 @@ export default function App() {
               </PublicOnly>
             }
           />
+          {/* Public: customers delete their account without the app (Google Play requirement). */}
+          <Route path="/delete-account" element={<DeleteAccountPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/applications" element={<ApplicationsPage />} />

@@ -21,7 +21,7 @@ from app.core.observability import init_error_tracking
 from app.core.idempotency import IdempotencyMiddleware
 from app.core.middleware import ClientGateMiddleware, RequestIDMiddleware
 from app.core.database import check_database_on_startup, get_db
-from app.modules.admin.bootstrap import ensure_configured_accounts
+from app.modules.admin.bootstrap import ensure_configured_accounts, ensure_loan_catalogue
 from app.core.redis import check_redis_on_startup, get_redis, get_redis_pool
 
 
@@ -40,6 +40,7 @@ async def lifespan(app: FastAPI):
     # The in-memory dev server and tests swap in their own database.
     if get_db not in app.dependency_overrides:
         await check_database_on_startup()
+        await ensure_loan_catalogue()
         await ensure_configured_accounts()
     yield
     await get_redis_pool().aclose()

@@ -45,3 +45,21 @@ class SupportTicket(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     app_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
     platform: Mapped[str | None] = mapped_column(String(20), nullable=True)
     device_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+
+class MessageAuthor(str, enum.Enum):
+    CUSTOMER = "customer"
+    STAFF = "staff"
+
+
+class SupportMessage(Base, UUIDPrimaryKeyMixin, TimestampMixin):
+    """One message in a support conversation, from the customer or the team."""
+
+    __tablename__ = "support_messages"
+
+    ticket_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("support_tickets.id", ondelete="CASCADE"), index=True
+    )
+    author: Mapped[str] = mapped_column(String(10))  # MessageAuthor value
+    staff_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), ForeignKey("staff.id"), nullable=True)
+    body: Mapped[str] = mapped_column(Text)

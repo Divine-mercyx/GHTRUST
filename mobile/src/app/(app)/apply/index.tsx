@@ -9,9 +9,10 @@ import { messageFor } from '@/api/errors';
 import type { LoanProduct } from '@/api/types';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
-import { Banner, CardSkeleton, ErrorState } from '@/components/States';
+import { Banner, CardSkeleton, EmptyState, ErrorState } from '@/components/States';
 import { Text } from '@/components/Text';
 import { maxTenureMonths } from '@/features/apply/config';
+import { eligibilityLines } from '@/lib/eligibility';
 import { keys, useApplications, useProducts } from '@/lib/queries';
 import { CADENCE } from '@/lib/status';
 import { colors, font, radius, space } from '@/theme/tokens';
@@ -57,8 +58,16 @@ export default function ChooseProduct() {
         </>
       ) : products.isError ? (
         <ErrorState error={products.error} onRetry={() => products.refetch()} />
+      ) : available.length === 0 ? (
+        <EmptyState
+          icon="cash-outline"
+          title="No loans available right now"
+          body="We're setting up our loan products. Check back soon, or contact us if you need help."
+          action={{ title: 'Try again', onPress: () => products.refetch() }}
+        />
       ) : (
         available.map((p, i) => {
+          const rules = eligibilityLines(p.eligibility_rules as Record<string, unknown>);
           const draft = drafts.find((d) => d.product_code === p.code);
           const busy = create.isPending && create.variables === p.code;
           return (
@@ -84,6 +93,29 @@ export default function ChooseProduct() {
                   <Chip text={p.repayment_cadence_options.map((c) => CADENCE[c] ?? c).join(' / ')} />
                   {p.max_tenure_days ? <Chip text={`Up to ${maxTenureMonths(p.max_tenure_days)} months`} /> : null}
                 </View>
+                {rules.length > 0 || p.required_document_types.length > 0 ? (
+                  <View style={styles.rules} accessibilityLabel={`Who can apply: ${rules.join('. ')}`}>
+                    <Text variant="caption" muted>
+                      WHO CAN APPLY
+                    </Text>
+                    {rules.slice(0, 4).map((line) => (
+                      <View key={line} style={styles.rule}>
+                        <Ionicons name="checkmark-circle" size={15} color={colors.cyanDeep} />
+                        <Text variant="small" style={{ flex: 1 }}>
+                          {line}
+                        </Text>
+                      </View>
+                    ))}
+                    {p.required_document_types.length > 0 ? (
+                      <View style={styles.rule}>
+                        <Ionicons name="document-attach-outline" size={15} color={colors.cyanDeep} />
+                        <Text variant="small" style={{ flex: 1 }}>
+                          {p.required_document_types.length} document{p.required_document_types.length === 1 ? '' : 's'} to upload
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
                 {draft ? (
                   <Text variant="small" color={colors.cyanDeep} style={{ fontFamily: font.bold, marginTop: space.sm }}>
                     You have a draft. Tap to continue it.
@@ -120,4 +152,6 @@ const styles = StyleSheet.create({
   },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: space.md },
   chip: { backgroundColor: colors.surface, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  rules: { marginTop: space.md, gap: 6 },
+  rule: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 });

@@ -60,6 +60,8 @@ class PaymentProvider(str, enum.Enum):
     # Funds moved outside any integrated rail (e.g. bank app / branch) and
     # recorded by staff with the external reference.
     MANUAL = "manual"
+    # Loan paid into the customer's GH Trust wallet (no bank transfer).
+    WALLET = "wallet"
 
 
 class PaymentChannel(str, enum.Enum):

@@ -321,23 +321,30 @@ class LedgerService:
         idempotency_key: str,
         reference: str,
         payment_transaction_id: str | None = None,
+        to_wallet: bool = False,
     ) -> LedgerJournal:
+        """Book the loan receivable against the money paid out: the bank transfer, or with
+        ``to_wallet`` the customer's GH Trust wallet (they withdraw it to any bank)."""
         if amount <= 0:
             raise LedgerError("Disbursement amount must be positive")
 
-        journal, _ = await self.post_journal(
+        wallet = await self._lock_wallet(customer_id) if to_wallet else None
+        paid_from = LedgerAccountCode.CUSTOMER_WALLET if to_wallet else LedgerAccountCode.PAYSTACK_SETTLEMENT
+        journal, created = await self.post_journal(
             idempotency_key=idempotency_key,
             journal_type=JournalType.LOAN_DISBURSEMENT,
             customer_id=customer_id,
             reference=reference,
-            description="Loan disbursed via Paystack transfer",
+            description="Loan paid into wallet" if to_wallet else "Loan disbursed via bank transfer",
             payment_transaction_id=payment_transaction_id,
             entries=[
                 (LedgerAccountCode.LOAN_RECEIVABLE, LedgerDirection.DEBIT, amount),
-                (LedgerAccountCode.PAYSTACK_SETTLEMENT, LedgerDirection.CREDIT, amount),
+                (paid_from, LedgerDirection.CREDIT, amount),
             ],
-            metadata={"reference": reference},
+            metadata={"reference": reference, "to_wallet": to_wallet},
         )
+        if created and wallet is not None:
+            wallet.available_balance += amount
         return journal
 
 

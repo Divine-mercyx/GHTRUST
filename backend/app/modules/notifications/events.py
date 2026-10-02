@@ -116,13 +116,14 @@ async def document_rejected(db: AsyncSession, application: LoanApplication, docu
     )
 
 
-async def loan_disbursed(db: AsyncSession, loan: Loan) -> None:
+async def loan_disbursed(db: AsyncSession, loan: Loan, *, to_wallet: bool = False) -> None:
     product = await _product_name(db, code=loan.product_type)
+    where = "paid into your GH Trust wallet" if to_wallet else "sent to your bank account"
     await NotificationService(db).notify(
         loan.customer_id,
         "loan_disbursed",
         "Your loan has been paid out",
-        f"{naira(loan.principal)} from your {product} has been sent to your bank account.",
+        f"{naira(loan.principal)} from your {product} has been {where}.",
         route=f"/loans/{loan.id}",
         dedupe_key=f"loan_disbursed:{loan.id}",
     )

@@ -35,8 +35,8 @@ class LegalDocument:
 TERMS = LegalDocument(
     slug="terms",
     title="Terms of Use",
-    version="2026-09-30",
-    effective_date="2026-09-30",
+    version="2026-10-02",
+    effective_date="2026-10-02",
     summary="The rules for using the GH Trust app: your account, your PINs, loans, the wallet, and what happens if something goes wrong.",
     sections=(
         Section(
@@ -112,11 +112,13 @@ TERMS = LegalDocument(
             "regulator.",
         ),
         Section(
-            "Changes and closing your account",
+            "Changes and deleting your account",
             "We may update these terms. If the change is significant we will ask you to accept the new "
-            "version in the app before you continue. You can ask us to close your account at any time once "
-            "you have no loan outstanding. We may close or restrict an account if required by law or if these "
-            "terms are broken.",
+            "version in the app before you continue. You can delete your account yourself at any time in the "
+            "app (Profile, then Delete account) or on our website, once you have no loan or repayment "
+            "outstanding, no application being processed, no money in your wallet and no withdrawal on its "
+            "way. Our Privacy Policy explains what is deleted and what we must keep. We may close or restrict "
+            "an account if required by law or if these terms are broken.",
         ),
         Section(
             "Law",
@@ -128,8 +130,8 @@ TERMS = LegalDocument(
 PRIVACY = LegalDocument(
     slug="privacy",
     title="Privacy Policy",
-    version="2026-09-30",
-    effective_date="2026-09-30",
+    version="2026-10-02",
+    effective_date="2026-10-02",
     summary="What personal data we collect, why, who we share it with, how long we keep it, and your rights under the Nigeria Data Protection Act 2023.",
     sections=(
         Section(
@@ -190,6 +192,22 @@ PRIVACY = LegalDocument(
             "or anonymise it.",
         ),
         Section(
+            "Deleting your account",
+            "You can delete your account yourself in the app (Profile, then Delete account) or on our "
+            "website, after confirming it's you with your sign-in PIN (and, on the website, a code sent to "
+            "your phone). You can't delete it while you have a loan or repayment outstanding, an application "
+            "being processed, money in your wallet or a withdrawal on its way, because we still owe each "
+            "other money. When you delete your account we sign you out on every phone and delete your PINs, "
+            "profile and BVN photos, contact details, address, payout bank account, saved phones, "
+            "notifications, unfinished applications and the text of your support messages. We keep records "
+            "of loans, repayments, payments, your wallet, signed agreements and applications you submitted "
+            "for the period the law requires, together with only the details that link them to you (BVN, "
+            "name, date of birth and account number). If you never had a loan or payment with us, those "
+            "details are deleted too. Information already shared with identity, credit bureau, payment or "
+            "SMS providers is kept by them under their own legal duties. Deleting an account can't be "
+            "undone; to bank with us again, contact us.",
+        ),
+        Section(
             "How we protect it",
             "Data is encrypted in transit and access is limited to staff who need it. Your PINs are stored "
             "only as secure hashes, and sensitive app data is kept in your phone's secure storage. If a breach "
@@ -218,11 +236,12 @@ REQUIRED = ("terms", "privacy")
 
 # Loan agreement: general conditions shown with every loan offer. Offer-specific figures
 # (amount, interest, fees, dates) are added per offer.
-LOAN_AGREEMENT_VERSION = "2026-09-30"
+LOAN_AGREEMENT_VERSION = "2026-10-02"
 LOAN_AGREEMENT_SECTIONS: tuple[Section, ...] = (
     Section(
         "The loan",
-        "We agree to lend you the amount in this offer and pay it into the bank account shown, and you agree "
+        "We agree to lend you the amount in this offer and pay it into your GH Trust wallet or the bank account "
+        "shown, and you agree "
         "to repay it with interest in the instalments and on the dates shown. The schedule in the app is "
         "part of this agreement.",
     ),

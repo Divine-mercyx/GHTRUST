@@ -10,4 +10,4 @@ dist/
 uploads/
 
 # scripts/dev_server.py
-dev_local.db
+dev_local.db*

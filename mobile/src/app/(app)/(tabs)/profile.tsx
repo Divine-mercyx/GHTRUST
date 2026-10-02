@@ -1,22 +1,57 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
+import { auth } from '@/api/endpoints';
+import { messageFor } from '@/api/errors';
+import type { Profile as ProfileData } from '@/api/types';
 import { APP_VERSION } from '@/api/config';
 import { useSession } from '@/auth/session';
+import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
+import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { Card, Row, SectionHeader } from '@/components/Card';
 import { Screen } from '@/components/Screen';
-import { CardSkeleton, ErrorState } from '@/components/States';
+import { Banner, CardSkeleton, ErrorState } from '@/components/States';
 import { Text } from '@/components/Text';
+import { PhotoError, pickProfilePhoto } from '@/features/profilePhoto';
 import { confirm } from '@/lib/confirm';
 import { date, humanize } from '@/lib/format';
-import { useMe } from '@/lib/queries';
+import { keys, useMe } from '@/lib/queries';
 import { colors, font, space } from '@/theme/tokens';
 
 export default function Profile() {
   const me = useMe();
   const { signOut } = useSession();
+  const queryClient = useQueryClient();
   const p = me.data;
+  const [sheet, setSheet] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  const savePhoto = useMutation({
+    mutationFn: (change: { image: string } | { remove: true }) =>
+      'remove' in change ? auth.removePhoto() : auth.setPhoto(change.image),
+    onSuccess: (profile: ProfileData) => {
+      setPhotoError(null);
+      queryClient.setQueryData(keys.me, profile);
+    },
+    onError: (e) => setPhotoError(messageFor(e)),
+  });
+
+  const choose = (source: 'camera' | 'library') =>
+    pickProfilePhoto(source)
+      .then((image) => image && savePhoto.mutate({ image }))
+      .catch((e) => setPhotoError(e instanceof PhotoError ? e.message : "We couldn't open your photos. Try again."));
+
+  const photoActions: SheetAction[] = [
+    { label: 'Take a photo', icon: 'camera-outline', onPress: () => choose('camera') },
+    { label: 'Choose from photos', icon: 'images-outline', onPress: () => choose('library') },
+    ...(p?.has_custom_photo
+      ? [{ label: 'Use my BVN photo', icon: 'finger-print-outline' as const, onPress: () => savePhoto.mutate({ remove: true }) }]
+      : []),
+  ];
 
   return (
     <Screen onRefresh={() => me.refetch()} refreshing={me.isRefetching}>
@@ -29,12 +64,21 @@ export default function Profile() {
       ) : (
         <>
           <Card style={styles.identity}>
-            <View style={styles.avatar}>
-              <Text variant="title" color={colors.white}>
-                {p.first_name[0]}
-                {p.last_name[0]}
-              </Text>
-            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Change profile photo"
+              disabled={savePhoto.isPending}
+              onPress={() => setSheet(true)}
+              style={styles.avatarWrap}>
+              <Avatar profile={p} size={84} />
+              <View style={styles.cameraBadge}>
+                {savePhoto.isPending ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Ionicons name="camera" size={14} color={colors.white} />
+                )}
+              </View>
+            </Pressable>
             <Text variant="heading" align="center">
               {p.full_name}
             </Text>
@@ -42,6 +86,8 @@ export default function Profile() {
               Account {p.account_number} · {p.branch}
             </Text>
           </Card>
+          {photoError ? <Banner message={photoError} /> : null}
+          <ActionSheet visible={sheet} title="Profile photo" actions={photoActions} onClose={() => setSheet(false)} />
 
           <SectionHeader
             title="Personal details"
@@ -66,8 +112,8 @@ export default function Profile() {
             <Row icon="shield-checkmark-outline" title="Account status" subtitle={humanize(p.status)} last />
           </Card>
           <Text variant="small" muted style={{ paddingHorizontal: space.xs }}>
-            You can update your email and address. Your name, BVN and date of birth come from your BVN record; to
-            change them, visit a branch.
+            Your name, BVN, date of birth, phone and photo come from your BVN record. You can change your photo,
+            email and address; to change the rest, visit a branch.
           </Text>
         </>
       )}
@@ -93,6 +139,19 @@ export default function Profile() {
         />
         <Row icon="document-text-outline" title="Terms of Use" onPress={() => router.push('/legal/terms')} />
         <Row icon="lock-closed-outline" title="Privacy Policy" onPress={() => router.push('/legal/privacy')} last />
+      </Card>
+
+      <SectionHeader title="Account" />
+      <Card style={styles.list}>
+        <Row
+          icon="trash-outline"
+          iconColor={colors.error}
+          iconBg={colors.errorBg}
+          title="Delete account"
+          subtitle="Permanently delete your account and personal data"
+          onPress={() => router.push('/delete-account')}
+          last
+        />
       </Card>
 
       <View style={{ gap: space.sm, marginTop: space.xl }}>
@@ -124,14 +183,19 @@ export default function Profile() {
 
 const styles = StyleSheet.create({
   identity: { alignItems: 'center', gap: 4, paddingVertical: space.xl },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.navy,
+  avatarWrap: { marginBottom: space.sm },
+  cameraBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.cyanDeep,
+    borderWidth: 2,
+    borderColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: space.sm,
   },
   list: { paddingVertical: space.xs },
 });

@@ -128,6 +128,13 @@ class AuthService:
         if customer and demo:
             await self._retire_demo_customer(customer)
             customer = None
+        if customer and customer.status == CustomerStatus.DELETED:
+            # Its financial records are kept against this BVN, so it can't simply open again.
+            raise AppError(
+                status.HTTP_409_CONFLICT,
+                ErrorCode.ACCOUNT_CLOSED,
+                "The account for this BVN was deleted. To open a new one, please contact us.",
+            )
         if customer and customer.status == CustomerStatus.ACTIVE:
             raise AppError(status.HTTP_409_CONFLICT, ErrorCode.ACCOUNT_EXISTS, "An account with this BVN already exists. Please login.")
         if customer and customer.phone_verified:

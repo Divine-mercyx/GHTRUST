@@ -16,6 +16,7 @@ import { colors, radius, space } from '@/theme/tokens';
 
 const KIND: Record<string, string> = {
   funding: 'Money added to wallet',
+  loan_payout: 'Loan paid into wallet',
   repayment: 'Loan repayment from wallet',
   withdrawal: 'Withdrawal to bank',
 };
@@ -97,7 +98,7 @@ export default function TransactionReceipt() {
         <Line label="Type" value={KIND[t.kind] ?? t.title} />
         {transactionDetail(t) ? (
           <Line
-            label={t.kind === 'withdrawal' ? 'To' : t.kind === 'repayment' ? 'Loan' : 'From'}
+            label={t.kind === 'withdrawal' ? 'To' : t.kind === 'repayment' || t.kind === 'loan_payout' ? 'Loan' : 'From'}
             value={transactionDetail(t)}
           />
         ) : null}

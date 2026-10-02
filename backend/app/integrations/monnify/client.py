@@ -247,6 +247,16 @@ class MonnifyClient:
             raw=body,
         )
 
+    async def deactivate_reserved_account(self, account_reference: str) -> bool:
+        """
+        Deallocate a customer's reserved account so it stops receiving transfers (used when
+        the customer deletes their account). Monnify: "Deallocating a reserved account".
+        """
+        if self._use_mock:
+            return True
+        await self._request("DELETE", f"/api/v1/bank-transfer/reserved-accounts/reference/{account_reference}")
+        return True
+
     async def get_reserved_account(self, account_reference: str) -> ReservedAccountResult:
         if self._use_mock:
             return ReservedAccountResult(

@@ -67,6 +67,13 @@ def _active_provider() -> PaymentProvider:
     return PaymentProvider.MONNIFY
 
 
+def wallet_payouts_enabled() -> bool:
+    """With the wallet switched on (FEATURE_FLAGS=wallet), loans are paid into it."""
+    from app.modules.app_config.service import enabled_features
+
+    return enabled_features().get("wallet", False)
+
+
 def _conflict(message: str, code: str = "CONFLICT") -> AppError:
     return AppError(status.HTTP_409_CONFLICT, code, message)
 
@@ -181,6 +188,8 @@ class DisbursementService:
         ip: str | None = None,
     ) -> LoanApplication:
         previous, amount = await self._prepare_attempt(application)
+        if wallet_payouts_enabled():
+            return await self._disburse_to_wallet(application, previous, amount, staff, note=note, ip=ip)
 
         form = application.universal_form or {}
         bank_code = form.get("bank_code") or form.get("payout_bank_code")
@@ -275,6 +284,42 @@ class DisbursementService:
             amount=str(amount),
             provider=provider.value,
         )
+        return application
+
+    async def _disburse_to_wallet(
+        self,
+        application: LoanApplication,
+        previous: LoanDisbursement | None,
+        amount: Decimal,
+        staff: Staff,
+        *,
+        note: str | None,
+        ip: str | None,
+    ) -> LoanApplication:
+        """
+        Pay the loan into the customer's GH Trust wallet. There's no bank transfer, so it
+        settles at once: the ledger moves the amount from the loan book to the wallet and
+        the loan is booked. The customer then withdraws to any bank account in the app.
+        """
+        reference = f"ghtrust_loan_{application.id[:8]}_{uuid4().hex[:12]}"
+        await self._open_attempt(
+            application, previous, amount=amount, reference=reference, provider=PaymentProvider.WALLET
+        )
+        await self.audit.log_staff(
+            application.id,
+            AuditEventType.DISBURSED,
+            staff,
+            message=note or "Loan paid into the customer's GH Trust wallet",
+            metadata={
+                "transfer_reference": reference,
+                "amount": str(amount),
+                "provider": PaymentProvider.WALLET.value,
+                "attempt": "retry" if previous else "first",
+            },
+            ip_address=ip,
+        )
+        await self.complete(reference)
+        logger.info("loan_paid_to_wallet", application_id=application.id, reference=reference, amount=str(amount))
         return application
 
     def _reports_success(self, rail_status: str) -> bool:
@@ -401,11 +446,15 @@ class DisbursementService:
         failure_reason_before = disbursement.failure_reason
         disbursement.failure_reason = None
 
+        to_wallet = False
         if disbursement.payment_transaction_id:
             payment_tx = await self.db.get(PaymentTransaction, disbursement.payment_transaction_id)
             if payment_tx:
+                to_wallet = payment_tx.provider == PaymentProvider.WALLET
                 payment_tx.status = TransactionStatus.COMPLETED
-                payment_tx.webhook_event = payment_tx.webhook_event or "transfer.success"
+                payment_tx.webhook_event = payment_tx.webhook_event or (
+                    "wallet.credit" if to_wallet else "transfer.success"
+                )
                 if data:
                     payment_tx.raw_payload = data
 
@@ -416,6 +465,7 @@ class DisbursementService:
                 idempotency_key=f"loan_disburse:{reference}",
                 reference=reference,
                 payment_transaction_id=disbursement.payment_transaction_id,
+                to_wallet=to_wallet,
             )
         except LedgerError as exc:
             logger.error("loan_disburse_ledger_failed", reference=reference, error=exc.message)
@@ -430,7 +480,7 @@ class DisbursementService:
 
         disbursed_on = completed_on or now.date()
         await LoanServicingService(self.db).book_loan(
-            application, principal=disbursement.amount, disbursed_on=disbursed_on
+            application, principal=disbursement.amount, disbursed_on=disbursed_on, paid_to_wallet=to_wallet
         )
         await self.audit.log_system(
             application.id,

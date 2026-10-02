@@ -7,6 +7,8 @@ import { appConfig, auth, banks, legal, loans, notifications, support, wallet } 
 export const keys = {
   config: ['config'] as const,
   me: ['me'] as const,
+  photo: (version: string | null | undefined) => ['photo', version ?? ''] as const,
+  deletionCheck: ['deletion-check'] as const,
   sessions: ['sessions'] as const,
   products: ['products'] as const,
   applications: ['applications'] as const,
@@ -55,6 +57,10 @@ export function useFeatures() {
 }
 
 export const useMe = () => useQuery({ queryKey: keys.me, queryFn: auth.me, staleTime: 5 * 60_000 });
+/** The profile photo (chosen, else from the BVN record); refetched when `photo_version` changes. */
+export const usePhoto = (version: string | null | undefined, enabled = true) =>
+  useQuery({ queryKey: keys.photo(version), queryFn: auth.photo, staleTime: Infinity, enabled });
+export const useDeletionCheck = () => useQuery({ queryKey: keys.deletionCheck, queryFn: auth.deletionCheck });
 export const useSessions = () => useQuery({ queryKey: keys.sessions, queryFn: auth.sessions });
 export const useProducts = () => useQuery({ queryKey: keys.products, queryFn: loans.products, staleTime: 10 * 60_000 });
 export const useApplications = () =>

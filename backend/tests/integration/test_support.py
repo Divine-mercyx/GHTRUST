@@ -132,3 +132,56 @@ class TestTickets:
             "/api/v1/admin/support/tickets", headers=_auth(tokens)
         )
         assert res.status_code in (401, 403)
+
+
+class TestConversation:
+    async def test_customer_and_staff_keep_writing(self, api_client, admin_headers):
+        tokens = await _register(api_client)
+        ticket = (await _report(api_client, tokens)).json()
+        tid = ticket["id"]
+        assert [m["author"] for m in ticket["messages"]] == ["customer"]
+        assert ticket["awaiting_reply"] is True
+
+        staff = await api_client.patch(
+            f"/api/v1/admin/support/tickets/{tid}", json={"reply": "Checking now."}, headers=admin_headers
+        )
+        assert staff.status_code == 200, staff.text
+        assert staff.json()["messages"][-1]["author_name"] != "GH Trust support"  # staff see who replied
+
+        mine = await api_client.post(
+            f"/api/v1/support/tickets/{tid}/messages", json={"body": "Thanks, still waiting."}, headers=_auth(tokens)
+        )
+        assert mine.status_code == 201, mine.text
+        convo = mine.json()
+        assert [(m["author"], m["author_name"]) for m in convo["messages"]] == [
+            ("customer", "You"),
+            ("staff", "GH Trust support"),
+            ("customer", "You"),
+        ]
+        assert convo["awaiting_reply"] is True
+
+        again = await api_client.patch(
+            f"/api/v1/admin/support/tickets/{tid}", json={"reply": "Credited."}, headers=admin_headers
+        )
+        bodies = [m["body"] for m in again.json()["messages"]]
+        assert bodies[-2:] == ["Thanks, still waiting.", "Credited."]  # earlier replies are kept
+
+    async def test_replying_reopens_a_resolved_request(self, api_client, admin_headers):
+        tokens = await _register(api_client)
+        tid = (await _report(api_client, tokens)).json()["id"]
+        await api_client.patch(f"/api/v1/admin/support/tickets/{tid}", json={"status": "resolved"}, headers=admin_headers)
+        res = await api_client.post(
+            f"/api/v1/support/tickets/{tid}/messages", json={"body": "It happened again."}, headers=_auth(tokens)
+        )
+        assert res.json()["status"] == "open"
+        page = (await api_client.get("/api/v1/admin/support/tickets", headers=admin_headers)).json()
+        assert page["items"][0]["id"] == tid and page["items"][0]["awaiting_reply"] is True
+
+    async def test_cannot_reply_to_someone_elses_request(self, api_client, admin_headers):
+        tokens = await _register(api_client)
+        tid = (await _report(api_client, tokens)).json()["id"]
+        res = await api_client.post(
+            "/api/v1/support/tickets/not-mine/messages", json={"body": "hi"}, headers=_auth(tokens)
+        )
+        assert res.status_code == 404
+        assert (await api_client.post(f"/api/v1/support/tickets/{tid}/messages", json={"body": "x"})).status_code == 401
