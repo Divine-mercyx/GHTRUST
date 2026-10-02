@@ -229,3 +229,29 @@ class TestBvnLookupErrors:
             res = await api_client.post("/api/v1/auth/register/bvn", json={"bvn": TEST_BVN})
         assert res.status_code == 503
         assert res.json()["code"] == "KYC_UNAVAILABLE"
+
+
+# Real phone frames: ~960 px JPEGs of a few hundred KB each. Three of them, base64
+# in JSON, are well over the general 256 KB JSON limit.
+BIG_SELFIE = base64.b64encode(b"\xff\xd8\xff\xe0" + b"\x07" * 400_000).decode()
+BIG_FRAMES = [base64.b64encode(b"\xff\xd8\xff\xe0" + bytes([n]) * 400_000).decode() for n in (1, 2)]
+
+
+class TestSelfieSize:
+    async def test_real_sized_photos_are_accepted(self, api_client, monkeypatch):
+        _selfie_on(monkeypatch)
+        started = await _start(api_client)
+        res = await _selfie(api_client, started["registration_token"], BIG_SELFIE, BIG_FRAMES)
+        assert res.status_code == 200, res.text
+
+    async def test_the_selfie_allowance_is_still_capped(self, api_client, monkeypatch):
+        _selfie_on(monkeypatch)
+        monkeypatch.setenv("MAX_SELFIE_BODY_MB", "1")
+        refresh_settings()
+        started = await _start(api_client)
+        res = await _selfie(api_client, started["registration_token"], BIG_SELFIE, BIG_FRAMES)
+        assert res.status_code == 413
+
+    async def test_other_json_requests_keep_the_small_limit(self, api_client):
+        res = await api_client.post("/api/v1/auth/login/request-otp", json={"phone": "0" * 300_000})
+        assert res.status_code == 413

@@ -54,7 +54,9 @@ def _parse_dob(dob_str: str | None) -> date | None:
 
 
 SELFIE_TICKET_SECONDS = 30 * 60
-MAX_SELFIE_BYTES = 3 * 1024 * 1024
+# Per image; the app sends ~960 px JPEGs (a few hundred KB), and the whole request is
+# capped by MAX_SELFIE_BODY_MB.
+MAX_SELFIE_BYTES = 10 * 1024 * 1024
 
 
 def _selfie_key(token: str) -> str:
