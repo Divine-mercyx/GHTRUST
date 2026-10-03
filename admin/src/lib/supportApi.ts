@@ -2,6 +2,14 @@ import { apiFetch } from './api'
 
 export type TicketStatus = 'open' | 'in_progress' | 'resolved'
 
+export interface SupportMessage {
+  id: string
+  author: 'customer' | 'staff'
+  author_name: string
+  body: string
+  created_at: string
+}
+
 export interface SupportTicket {
   id: string
   reference: string
@@ -13,6 +21,9 @@ export interface SupportTicket {
   reply: string | null
   replied_at: string | null
   created_at: string
+  updated_at: string
+  awaiting_reply: boolean
+  messages: SupportMessage[]
   customer_id: string
   customer_name: string
   customer_phone: string

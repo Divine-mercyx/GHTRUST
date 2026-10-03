@@ -77,7 +77,7 @@ async def test_idle_staff_session_cannot_be_refreshed(api_client, db_session, ad
     session = (
         await db_session.execute(select(AuthSession).where(AuthSession.refresh_token_hash == hash_token(token)))
     ).scalar_one()
-    session.last_used_at = datetime.now(timezone.utc) - timedelta(minutes=21)
+    session.last_used_at = datetime.now(timezone.utc) - timedelta(minutes=31)  # default timeout is 30 minutes
     await db_session.commit()
 
     res = await api_client.post("/api/v1/admin/auth/token/refresh", headers={"Cookie": f"{COOKIE}={token}"})

@@ -54,13 +54,6 @@ def _refresh_ttl(subject_type: SubjectType) -> timedelta:
     return timedelta(days=settings.customer_refresh_token_days)
 
 
-def _idle_limit(subject_type: SubjectType) -> timedelta | None:
-    """Staff sessions end after inactivity; customer (mobile) sessions don't."""
-    if subject_type == SubjectType.STAFF:
-        return timedelta(minutes=get_settings().staff_session_idle_minutes)
-    return None
-
-
 def _token_type(subject_type: SubjectType) -> str:
     return TOKEN_TYPE_STAFF if subject_type == SubjectType.STAFF else TOKEN_TYPE_CUSTOMER
 
@@ -162,21 +155,16 @@ class SessionService:
                 "Session expired. Please sign in again.",
             )
 
-        idle = _idle_limit(subject_type)
-        if idle is not None and now - as_utc(session.last_used_at) > idle:
-            await self.revoke(session, reason="idle_timeout")
-            await self.db.commit()
-            raise AppError(
-                status.HTTP_401_UNAUTHORIZED,
-                ErrorCode.SESSION_IDLE_TIMEOUT,
-                "Signed out after a period of inactivity. Please sign in again.",
-            )
+        await self.end_if_idle(session, now=now)
 
         new_token = generate_refresh_token()
         session.previous_refresh_token_hash = presented
         session.refresh_token_hash = hash_token(new_token)
         session.rotated_at = now
-        session.last_used_at = now
+        # A staff session's last_used_at marks real activity (see touch()); a refresh happens
+        # on a timer, so it doesn't count. Customer sessions have no idle limit.
+        if session.subject_type != SubjectType.STAFF:
+            session.last_used_at = now
         if meta and meta.ip:
             session.ip_address = meta.ip
         await self.db.flush()
@@ -255,6 +243,37 @@ class SessionService:
             refresh_expires_in=max(refresh_expires_in, 0),
             session_id=session.id,
         )
+
+    # ── Idle timeout (staff) ────────────────────────────────────────────────
+
+    async def idle_limit(self, session: AuthSession) -> timedelta | None:
+        """Staff sessions end after inactivity (set in the portal); customer sessions don't."""
+        if session.subject_type != SubjectType.STAFF:
+            return None
+        from app.modules.admin.security_settings import staff_idle_minutes
+
+        return timedelta(minutes=await staff_idle_minutes(self.db, session.subject_id))
+
+    async def end_if_idle(self, session: AuthSession, *, now: datetime | None = None) -> None:
+        """Revoke and refuse a session that has been idle too long. Commits on refusal."""
+        limit = await self.idle_limit(session)
+        now = now or datetime.now(timezone.utc)
+        if limit is not None and now - as_utc(session.last_used_at) > limit:
+            await self.revoke(session, reason="idle_timeout")
+            # Must persist even though this request fails: the error path rolls back.
+            await self.db.commit()
+            raise AppError(
+                status.HTTP_401_UNAUTHORIZED,
+                ErrorCode.SESSION_IDLE_TIMEOUT,
+                "Signed out after a period of inactivity. Please sign in again.",
+            )
+
+    async def touch(self, session: AuthSession) -> datetime:
+        """Record real activity (staff portal): the idle clock starts again."""
+        await self.end_if_idle(session)
+        session.last_used_at = datetime.now(timezone.utc)
+        await self.db.flush()
+        return session.last_used_at
 
     # ── Validate / revoke / list ────────────────────────────────────────────
 

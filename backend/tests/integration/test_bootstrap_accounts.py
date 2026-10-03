@@ -80,3 +80,18 @@ async def test_bad_demo_settings_never_stop_startup(db_engine, monkeypatch):
 async def test_nothing_configured_does_nothing(db_engine):
     await ensure_configured_accounts(async_sessionmaker(db_engine, class_=AsyncSession))
     assert await _staff(db_engine) == []
+
+
+async def test_startup_seeds_the_loan_catalogue_once(db_engine):
+    from app.modules.admin.bootstrap import ensure_loan_catalogue
+    from app.modules.loans.models import LoanProduct
+    from app.modules.loans.workflow_models import LoanWorkflow
+
+    factory = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
+    await ensure_loan_catalogue(factory)
+    await ensure_loan_catalogue(factory)  # every restart: nothing duplicated
+    async with factory() as s:
+        products = list((await s.execute(select(LoanProduct))).scalars())
+        workflows = list((await s.execute(select(LoanWorkflow))).scalars())
+    assert {p.code for p in products} >= {"business_loan", "payday_loan", "study_loan", "asset_loan"}
+    assert len(workflows) == len({w.product_id for w in workflows}) >= 4

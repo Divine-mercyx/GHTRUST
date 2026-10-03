@@ -83,6 +83,7 @@ export default function AppLayout() {
         <Stack.Screen name="support/index" options={{ title: 'Help & support' }} />
         <Stack.Screen name="support/new" options={{ title: 'Report a problem' }} />
         <Stack.Screen name="support/[id]" options={{ title: 'Your request' }} />
+        <Stack.Screen name="delete-account" options={{ title: 'Delete account' }} />
       </Stack.Protected>
     </Stack>
   );

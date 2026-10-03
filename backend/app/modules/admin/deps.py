@@ -9,7 +9,7 @@ from app.core.deps import DbSession, bearer_scheme, unauthenticated
 from app.core.errors import AppError, ErrorCode
 from app.core.security import TOKEN_TYPE_STAFF, TokenError, decode_access_token
 from app.modules.admin.models import Staff, StaffStatus
-from app.modules.auth.models import SubjectType
+from app.modules.auth.models import AuthSession, SubjectType
 from app.modules.auth.session_service import SessionService
 
 
@@ -25,10 +25,11 @@ async def get_current_staff(
     except TokenError:
         raise unauthenticated(ErrorCode.TOKEN_INVALID, "Invalid or expired token")
 
-    if not await SessionService(db).is_active(
-        claims.sid, subject_type=SubjectType.STAFF, subject_id=claims.sub
-    ):
+    sessions = SessionService(db)
+    if not await sessions.is_active(claims.sid, subject_type=SubjectType.STAFF, subject_id=claims.sub):
         raise unauthenticated(ErrorCode.SESSION_REVOKED, "Session ended. Please sign in again.")
+    # Idle for longer than the timeout: refused now, not only at the next token refresh.
+    await sessions.end_if_idle(await db.get(AuthSession, claims.sid))
 
     result = await db.execute(
         select(Staff)

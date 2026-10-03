@@ -10,6 +10,7 @@ from app.core.deps import DbSession, RedisClient
 from app.modules.admin.router import router as admin_router
 from app.modules.admin.onboarding import router as admin_onboarding_router
 from app.modules.app_config.router import router as app_config_router
+from app.modules.auth.account_router import router as auth_account_router
 from app.modules.auth.router import router as auth_router
 from app.modules.auth.security_router import router as auth_security_router
 from app.modules.loans.admin_router import router as admin_loans_router
@@ -25,6 +26,7 @@ from app.modules.payments.webhook_router import router as paystack_webhook_route
 from app.modules.investments.router import router as investments_router
 from app.modules.loans.router import router as loans_router
 from app.modules.admin.settings_router import router as admin_settings_router
+from app.modules.admin.session_router import router as admin_session_router
 from app.modules.savings.router import router as savings_router
 from app.modules.users.admin_router import router as admin_customers_router
 
@@ -32,9 +34,11 @@ api_v1_router = APIRouter()
 
 api_v1_router.include_router(app_config_router)
 api_v1_router.include_router(auth_router)
+api_v1_router.include_router(auth_account_router)
 api_v1_router.include_router(auth_security_router)
 api_v1_router.include_router(admin_router)
 api_v1_router.include_router(admin_settings_router)
+api_v1_router.include_router(admin_session_router)
 api_v1_router.include_router(admin_customers_router)
 api_v1_router.include_router(admin_loans_router)
 api_v1_router.include_router(admin_payments_router)

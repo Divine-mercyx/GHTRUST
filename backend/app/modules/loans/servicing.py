@@ -252,7 +252,12 @@ class LoanServicingService:
     # -- booking --------------------------------------------------------------
 
     async def book_loan(
-        self, application: LoanApplication, *, principal: Decimal, disbursed_on: date
+        self,
+        application: LoanApplication,
+        *,
+        principal: Decimal,
+        disbursed_on: date,
+        paid_to_wallet: bool = False,
     ) -> Loan:
         """Create the loan and its schedule. Idempotent per application."""
         existing = (
@@ -323,7 +328,7 @@ class LoanServicingService:
             installments=len(lines),
             method=method.value,
         )
-        await notify.loan_disbursed(self.db, loan)
+        await notify.loan_disbursed(self.db, loan, to_wallet=paid_to_wallet)
         return loan
 
     # -- repayments -----------------------------------------------------------

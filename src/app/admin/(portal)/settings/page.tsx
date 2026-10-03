@@ -8,6 +8,7 @@ import { Empty, ErrorState, PageSkeleton } from "@/components/admin/States";
 import { settingsApi } from "@/lib/admin/endpoints";
 import { useResource } from "@/lib/admin/hooks";
 import { API_BASE } from "@/lib/admin/api";
+import { SessionTimeoutCard } from "@/components/admin/SessionTimeoutCard";
 
 export default function SettingsPage() {
   const settings = useResource(() => settingsApi.get());
@@ -33,12 +34,13 @@ export default function SettingsPage() {
     <>
       <PageHeader
         title="Settings"
-        description="Read-only view of how the backend is configured. Changes are made in the server environment."
+        description="The staff session timeout, and a read-only view of how the backend is configured."
         meta={<Badge variant={s.app_env === "production" ? "success" : "warning"} dot>{s.app_env}</Badge>}
       />
 
       <div className="grid items-start gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">
+          <SessionTimeoutCard />
           <Card>
             <CardHeader title="Environment" />
             <DescriptionList

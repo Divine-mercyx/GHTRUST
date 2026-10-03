@@ -182,6 +182,10 @@ class CustomerProfileResponse(BaseModel):
     transfers_blocked_until: datetime | None = Field(
         None, description="Money can't leave the account before this time (set after a lost-phone sign-in)."
     )
+    has_custom_photo: bool = Field(
+        False, description="The customer chose a profile photo (else /auth/me/photo serves the BVN photo)."
+    )
+    photo_version: str | None = Field(None, description="Changes whenever the profile photo changes; use it to refresh.")
     legal_pending: list[str] = Field(
         default_factory=list,
         description="Legal documents (e.g. 'terms', 'privacy') to accept at their current version before continuing.",
@@ -214,6 +218,10 @@ class CustomerProfileResponse(BaseModel):
             login_pin_set=bool(customer.login_pin_hash),
             transaction_pin_set=bool(customer.transaction_pin_hash),
             transfers_blocked_until=customer.transfers_blocked_until,
+            has_custom_photo=customer.profile_photo_updated_at is not None,
+            photo_version=(customer.profile_photo_updated_at or customer.created_at).isoformat()
+            if (customer.profile_photo_updated_at or customer.created_at)
+            else None,
             legal_pending=_legal_pending(customer),
         )
 

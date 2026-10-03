@@ -55,3 +55,7 @@ export type Faqs = S['FaqsResponse'];
 export type SupportTicket = S['TicketResponse'];
 export type TicketCategory = S['CreateTicketRequest']['category'];
 export type TicketRelated = NonNullable<S['CreateTicketRequest']['related_type']>;
+export type SupportMessage = S['MessageResponse'];
+export type ProfilePhoto = S['ProfilePhotoResponse'];
+export type DeletionCheck = S['DeletionCheckResponse'];
+export type AccountDeleted = S['AccountDeletedResponse'];

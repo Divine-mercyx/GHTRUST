@@ -18,6 +18,7 @@ class CustomerStatus(str, enum.Enum):
     ACTIVE = "active"
     SUSPENDED = "suspended"
     INACTIVE = "inactive"
+    DELETED = "deleted"  # deleted by the customer: personal data scrubbed, financial records kept
 
 
 class Customer(Base, UUIDPrimaryKeyMixin, TimestampMixin):
@@ -81,6 +82,9 @@ class Customer(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     # --- Photo (base64 from Dojah — move to object storage in production) ---
     # Deferred: can be 100s of KB and was loaded on every authenticated request.
     bvn_photo_base64: Mapped[str | None] = mapped_column(Text, nullable=True, deferred=True)
+    # A photo the customer chose for their profile; without one the app shows the BVN photo.
+    profile_photo_base64: Mapped[str | None] = mapped_column(Text, nullable=True, deferred=True)
+    profile_photo_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # --- Auth tracking ---
     phone_verified: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -100,6 +104,8 @@ class Customer(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     transaction_pin_failed_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     # Money can't leave the account before this (e.g. after signing in without the old phone).
     transfers_blocked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Set when the customer deleted their account (status DELETED). See account_deletion.py.
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Versions of the Terms of Use / Privacy Policy last accepted (history in legal_acceptances).
     terms_accepted_version: Mapped[str | None] = mapped_column(String(20), nullable=True)

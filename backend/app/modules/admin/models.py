@@ -1,6 +1,9 @@
 import enum
 
-from sqlalchemy import Boolean, ForeignKey, JSON, String
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, func
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -36,6 +39,9 @@ class Staff(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         ForeignKey("roles.id", ondelete="SET NULL"), nullable=True, index=True
     )
     is_super_admin: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    # A shorter idle timeout this person chose for themselves (never longer than the
+    # organisation's; see security_settings.py). None: use the organisation's.
+    session_idle_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[StaffStatus] = mapped_column(
         StrEnum(StaffStatus), default=StaffStatus.INACTIVE, index=True
     )
@@ -54,3 +60,14 @@ class Staff(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     def has_permission(self, permission: str) -> bool:
         return permission in self.effective_permissions
+
+
+class SystemSetting(Base):
+    """An organisation-wide setting a super admin changes in the portal (see security_settings.py)."""
+
+    __tablename__ = "system_settings"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[dict | int | str | bool] = mapped_column(JSON, nullable=False)
+    updated_by: Mapped[str | None] = mapped_column(UUID(as_uuid=False), ForeignKey("staff.id"), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

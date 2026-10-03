@@ -24,6 +24,7 @@ from app.modules.payments.models import (
     LedgerAccountCode,
     LedgerEntry,
     LedgerJournal,
+    LoanDisbursement,
     WithdrawalRequest,
     WithdrawalStatus,
 )
@@ -96,7 +97,9 @@ class WalletTransactionService:
             select(LedgerJournal)
             .where(
                 LedgerJournal.customer_id == customer_id,
-                LedgerJournal.journal_type.in_([JournalType.WALLET_FUNDING, JournalType.LOAN_REPAYMENT]),
+                LedgerJournal.journal_type.in_(
+                    [JournalType.WALLET_FUNDING, JournalType.LOAN_REPAYMENT, JournalType.LOAN_DISBURSEMENT]
+                ),
                 touches_wallet,
             )
             .options(selectinload(LedgerJournal.entries))
@@ -116,7 +119,7 @@ class WalletTransactionService:
         withdrawals: list[WithdrawalRequest] = []
         query = self._journals(customer_id).where(_older_than(LedgerJournal, customer_id, after))
         if direction == "in":
-            query = query.where(LedgerJournal.journal_type == JournalType.WALLET_FUNDING)
+            query = query.where(LedgerJournal.journal_type.in_([JournalType.WALLET_FUNDING, JournalType.LOAN_DISBURSEMENT]))
         elif direction == "out":
             query = query.where(LedgerJournal.journal_type == JournalType.LOAN_REPAYMENT)
         journals = list(
@@ -144,7 +147,8 @@ class WalletTransactionService:
         rows.sort(key=lambda r: (r[0], r[1]), reverse=True)
         page, more = rows[:limit], len(rows) > limit
 
-        repayments = await self._repayments([r[2] for r in page if isinstance(r[2], LedgerJournal)])
+        journal_rows = [r[2] for r in page if isinstance(r[2], LedgerJournal)]
+        repayments = {**await self._repayments(journal_rows), **await self._payouts(journal_rows)}
         items = [
             self._from_journal(r[2], repayments.get(r[2].id))
             if isinstance(r[2], LedgerJournal)
@@ -163,8 +167,8 @@ class WalletTransactionService:
             ).scalar_one_or_none()
             if journal is None:
                 return None
-            repayments = await self._repayments([journal])
-            return self._from_journal(journal, repayments.get(journal.id))
+            loans = {**await self._repayments([journal]), **await self._payouts([journal])}
+            return self._from_journal(journal, loans.get(journal.id))
         if transaction_id.startswith(_WITHDRAWAL):
             withdrawal = (
                 await self.db.execute(
@@ -189,6 +193,18 @@ class WalletTransactionService:
         )
         return {journal_id: (loan_id, product) for journal_id, loan_id, product in result.all()}
 
+    async def _payouts(self, journals: list[LedgerJournal]) -> dict[str, tuple[str, str]]:
+        """journal id → (loan id, loan product code) for loans paid into the wallet."""
+        refs = {j.reference: j.id for j in journals if j.journal_type == JournalType.LOAN_DISBURSEMENT and j.reference}
+        if not refs:
+            return {}
+        result = await self.db.execute(
+            select(LoanDisbursement.transfer_reference, Loan.id, Loan.product_type)
+            .join(Loan, Loan.application_id == LoanDisbursement.application_id)
+            .where(LoanDisbursement.transfer_reference.in_(list(refs)))
+        )
+        return {refs[ref]: (loan_id, product) for ref, loan_id, product in result.all()}
+
     @staticmethod
     def _wallet_amount(journal: LedgerJournal) -> float:
         return float(
@@ -196,14 +212,16 @@ class WalletTransactionService:
         )
 
     def _from_journal(self, journal: LedgerJournal, loan: tuple[str, str] | None) -> dict:
+        payout = journal.journal_type == JournalType.LOAN_DISBURSEMENT
         funding = journal.journal_type == JournalType.WALLET_FUNDING
+        kind = "loan_payout" if payout else "funding" if funding else "repayment"
         return {
             "id": f"{_JOURNAL}{journal.id}",
-            "kind": "funding" if funding else "repayment",
-            "direction": "in" if funding else "out",
+            "kind": kind,
+            "direction": "in" if payout or funding else "out",
             "amount": self._wallet_amount(journal),
             "status": "completed",
-            "title": "Money added" if funding else "Loan repayment",
+            "title": {"loan_payout": "Loan paid out", "funding": "Money added", "repayment": "Loan repayment"}[kind],
             "detail": "Bank transfer" if funding else None,
             "reference": journal.reference,
             "loan_id": loan[0] if loan else None,

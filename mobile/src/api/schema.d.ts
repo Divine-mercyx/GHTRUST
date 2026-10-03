@@ -254,7 +254,12 @@ export interface paths {
         get: operations["get_current_profile_api_v1_auth_me_get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete my account
+         * @description Permanently delete the signed-in customer's account. Needs the sign-in PIN and the word
+         *     DELETE. Every session ends at once. Refused (409) while anything is still open.
+         */
+        delete: operations["delete_my_account_api_v1_auth_me_delete"];
         options?: never;
         head?: never;
         /**
@@ -262,6 +267,88 @@ export interface paths {
          * @description Change email and/or home address. Only the fields sent are changed.
          */
         patch: operations["update_contact_details_api_v1_auth_me_patch"];
+        trace?: never;
+    };
+    "/api/v1/auth/me/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Profile photo
+         * @description The photo the customer chose, else the photo on their BVN record.
+         */
+        get: operations["get_profile_photo_api_v1_auth_me_photo_get"];
+        /** Change profile photo */
+        put: operations["update_profile_photo_api_v1_auth_me_photo_put"];
+        post?: never;
+        /**
+         * Remove chosen photo
+         * @description Go back to the BVN photo.
+         */
+        delete: operations["remove_profile_photo_api_v1_auth_me_photo_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me/account-deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Can this account be deleted, and what happens */
+        get: operations["deletion_check_api_v1_auth_me_account_deletion_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/account-deletion/request-otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Web account deletion: send a code
+         * @description Texts a code to the account's phone. Says the same thing whether or not an account exists.
+         */
+        post: operations["web_deletion_code_api_v1_auth_account_deletion_request_otp_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/account-deletion/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Web account deletion: confirm
+         * @description Delete the account the phone number belongs to, with its SMS code and sign-in PIN.
+         */
+        post: operations["web_delete_account_api_v1_auth_account_deletion_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/auth/pin": {
@@ -866,6 +953,68 @@ export interface paths {
         get: operations["list_audit_logs_api_v1_admin_settings_audit_logs_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/settings/security": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Session timeout settings */
+        get: operations["get_security_settings_api_v1_admin_settings_security_get"];
+        /**
+         * Change the staff idle timeout
+         * @description Super admins only. Applies to every staff member from their next request.
+         */
+        put: operations["update_security_settings_api_v1_admin_settings_security_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/auth/me/session-timeout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose a shorter timeout
+         * @description A staff member may sign out sooner than the organisation requires, never later.
+         */
+        put: operations["update_my_timeout_api_v1_admin_auth_me_session_timeout_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/auth/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record activity (staff portal)
+         * @description The portal calls this when the staff member actually does something (click, type,
+         *     navigate), at most about once a minute. Only this restarts the idle clock.
+         */
+        post: operations["record_activity_api_v1_admin_auth_activity_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1982,6 +2131,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/support/tickets/{ticket_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reply in one of my requests */
+        post: operations["reply_to_ticket_api_v1_support_tickets__ticket_id__messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/support/tickets": {
         parameters: {
             query?: never;
@@ -2208,6 +2374,35 @@ export interface components {
             /** Transaction Pin */
             transaction_pin: string;
         };
+        /** AccountDeletedResponse */
+        AccountDeletedResponse: {
+            /**
+             * Status
+             * @default deleted
+             * @constant
+             */
+            status: "deleted";
+            /**
+             * Deleted At
+             * Format: date-time
+             */
+            deleted_at: string;
+        };
+        /** ActivityResponse */
+        ActivityResponse: {
+            /** Effective Idle Minutes */
+            effective_idle_minutes: number;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
+            /**
+             * Idle Expires At
+             * Format: date-time
+             */
+            idle_expires_at: string;
+        };
         /** AdminDashboardResponse */
         AdminDashboardResponse: {
             /** Total Applications */
@@ -2287,6 +2482,18 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Awaiting Reply */
+            awaiting_reply: boolean;
+            /**
+             * Messages
+             * @default []
+             */
+            messages: components["schemas"]["MessageResponse"][];
             /** Customer Id */
             customer_id: string;
             /** Customer Name */
@@ -2919,6 +3126,17 @@ export interface components {
              */
             transfers_blocked_until?: string | null;
             /**
+             * Has Custom Photo
+             * @description The customer chose a profile photo (else /auth/me/photo serves the BVN photo).
+             * @default false
+             */
+            has_custom_photo: boolean;
+            /**
+             * Photo Version
+             * @description Changes whenever the profile photo changes; use it to refresh.
+             */
+            photo_version?: string | null;
+            /**
              * Legal Pending
              * @description Legal documents (e.g. 'terms', 'privacy') to accept at their current version before continuing.
              */
@@ -2949,7 +3167,7 @@ export interface components {
          * CustomerStatus
          * @enum {string}
          */
-        CustomerStatus: "pending_otp" | "active" | "suspended" | "inactive";
+        CustomerStatus: "pending_otp" | "active" | "suspended" | "inactive" | "deleted";
         /** CustomerSummaryResponse */
         CustomerSummaryResponse: {
             /** Id */
@@ -3017,6 +3235,37 @@ export interface components {
             status: string;
             /** Count */
             count: number;
+        };
+        /** DeleteAccountRequest */
+        DeleteAccountRequest: {
+            /**
+             * Pin
+             * @description The 6-digit sign-in PIN
+             */
+            pin: string;
+            /**
+             * Confirmation
+             * @description Must be 'DELETE'
+             */
+            confirmation: string;
+        };
+        /** DeletionBlocker */
+        DeletionBlocker: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
+        /** DeletionCheckResponse */
+        DeletionCheckResponse: {
+            /** Can Delete */
+            can_delete: boolean;
+            /** Blockers */
+            blockers: components["schemas"]["DeletionBlocker"][];
+            /** Will Delete */
+            will_delete: string[];
+            /** Will Keep */
+            will_keep: string[];
         };
         /** DemographicBucket */
         DemographicBucket: {
@@ -3758,6 +4007,25 @@ export interface components {
             /** Ids */
             ids?: string[] | null;
         };
+        /** MessageResponse */
+        MessageResponse: {
+            /** Id */
+            id: string;
+            /**
+             * Author
+             * @enum {string}
+             */
+            author: "customer" | "staff";
+            /** Author Name */
+            author_name: string;
+            /** Body */
+            body: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** NotificationPage */
         NotificationPage: {
             /** Items */
@@ -3883,7 +4151,7 @@ export interface components {
          * PaymentProvider
          * @enum {string}
          */
-        PaymentProvider: "paystack" | "monnify" | "zest" | "stanbic" | "manual";
+        PaymentProvider: "paystack" | "monnify" | "zest" | "stanbic" | "manual" | "wallet";
         /** PayoutAccountSavedResponse */
         PayoutAccountSavedResponse: {
             /** Message */
@@ -3979,6 +4247,21 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** ProfilePhotoResponse */
+        ProfilePhotoResponse: {
+            /**
+             * Image
+             * @description Base64 JPEG or PNG; null when there's no photo
+             */
+            image?: string | null;
+            /** Content Type */
+            content_type?: string | null;
+            /**
+             * Source
+             * @description 'custom' if the customer chose it, 'bvn' if it's from their BVN record
+             */
+            source?: ("custom" | "bvn") | null;
+        };
         /** PushTokenRequest */
         PushTokenRequest: {
             /**
@@ -4060,6 +4343,11 @@ export interface components {
             status: components["schemas"]["InstallmentStatus"];
             /** Paid At */
             paid_at?: string | null;
+        };
+        /** ReplyRequest */
+        ReplyRequest: {
+            /** Body */
+            body: string;
         };
         /** ResendRegistrationOtpRequest */
         ResendRegistrationOtpRequest: {
@@ -4203,6 +4491,37 @@ export interface components {
             heading: string;
             /** Body */
             body: string;
+        };
+        /** SecuritySettingsResponse */
+        SecuritySettingsResponse: {
+            /**
+             * Staff Idle Minutes
+             * @description The organisation's idle timeout
+             */
+            staff_idle_minutes: number;
+            /** Min Minutes */
+            min_minutes: number;
+            /** Max Minutes */
+            max_minutes: number;
+            /** Updated At */
+            updated_at: string | null;
+            /** Updated By Name */
+            updated_by_name: string | null;
+            /**
+             * My Idle Minutes
+             * @description A shorter timeout this staff member chose, if any
+             */
+            my_idle_minutes: number | null;
+            /**
+             * Effective Idle Minutes
+             * @description What applies to this staff member
+             */
+            effective_idle_minutes: number;
+            /**
+             * Can Edit
+             * @description Super admins change the organisation's timeout
+             */
+            can_edit: boolean;
         };
         /**
          * SelfieRequiredResponse
@@ -4500,6 +4819,18 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Awaiting Reply */
+            awaiting_reply: boolean;
+            /**
+             * Messages
+             * @default []
+             */
+            messages: components["schemas"]["MessageResponse"][];
         };
         /** TokenPair */
         TokenPair: {
@@ -4653,6 +4984,19 @@ export interface components {
             /** Residential Address */
             residential_address?: string | null;
         };
+        /** UpdateMyTimeoutRequest */
+        UpdateMyTimeoutRequest: {
+            /**
+             * Minutes
+             * @description null: use the organisation's
+             */
+            minutes?: number | null;
+        };
+        /** UpdateOrgTimeoutRequest */
+        UpdateOrgTimeoutRequest: {
+            /** Staff Idle Minutes */
+            staff_idle_minutes: number;
+        };
         /** UpdatePayoutAccountRequest */
         UpdatePayoutAccountRequest: {
             /** Bank Code */
@@ -4668,6 +5012,14 @@ export interface components {
              * @description Customer's 4-digit transaction PIN
              */
             transaction_pin: string;
+        };
+        /** UpdatePhotoRequest */
+        UpdatePhotoRequest: {
+            /**
+             * Image
+             * @description Base64 JPEG or PNG, up to 5 MB
+             */
+            image: string;
         };
         /** UpdateTicketRequest */
         UpdateTicketRequest: {
@@ -4797,7 +5149,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "funding" | "repayment" | "withdrawal";
+            kind: "funding" | "loan_payout" | "repayment" | "withdrawal";
             /**
              * Direction
              * @enum {string}
@@ -4829,6 +5181,28 @@ export interface components {
             created_at: string;
             /** Completed At */
             completed_at?: string | null;
+        };
+        /** WebDeleteAccountRequest */
+        WebDeleteAccountRequest: {
+            /**
+             * Pin
+             * @description The 6-digit sign-in PIN
+             */
+            pin: string;
+            /**
+             * Confirmation
+             * @description Must be 'DELETE'
+             */
+            confirmation: string;
+            /** Phone */
+            phone: string;
+            /** Otp */
+            otp: string;
+        };
+        /** WebDeletionCodeRequest */
+        WebDeletionCodeRequest: {
+            /** Phone */
+            phone: string;
         };
         /** WebhookAckResponse */
         WebhookAckResponse: {
@@ -5359,6 +5733,46 @@ export interface operations {
             };
         };
     };
+    delete_my_account_api_v1_auth_me_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountDeletedResponse"];
+                };
+            };
+            /** @description A loan, application, wallet balance or withdrawal is still open */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     update_contact_details_api_v1_auth_me_patch: {
         parameters: {
             query?: never;
@@ -5380,6 +5794,172 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CustomerProfileResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_profile_photo_api_v1_auth_me_photo_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfilePhotoResponse"];
+                };
+            };
+        };
+    };
+    update_profile_photo_api_v1_auth_me_photo_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePhotoRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_profile_photo_api_v1_auth_me_photo_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerProfileResponse"];
+                };
+            };
+        };
+    };
+    deletion_check_api_v1_auth_me_account_deletion_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeletionCheckResponse"];
+                };
+            };
+        };
+    };
+    web_deletion_code_api_v1_auth_account_deletion_request_otp_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebDeletionCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["app__modules__auth__schemas__OtpSentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    web_delete_account_api_v1_auth_account_deletion_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebDeleteAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountDeletedResponse"];
+                };
+            };
+            /** @description A loan, application, wallet balance or withdrawal is still open */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -6501,6 +7081,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_security_settings_api_v1_admin_settings_security_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecuritySettingsResponse"];
+                };
+            };
+        };
+    };
+    update_security_settings_api_v1_admin_settings_security_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOrgTimeoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecuritySettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_my_timeout_api_v1_admin_auth_me_session_timeout_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMyTimeoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecuritySettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_activity_api_v1_admin_auth_activity_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityResponse"];
                 };
             };
         };
@@ -8592,6 +9278,41 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reply_to_ticket_api_v1_support_tickets__ticket_id__messages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

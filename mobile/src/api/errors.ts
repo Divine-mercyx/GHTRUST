@@ -85,6 +85,17 @@ const COPY: Record<string, string> = {
   TRANSACTION_PIN_LOCKED: 'Your transaction PIN is locked after too many wrong tries. Reset it in Security settings.',
   TRANSACTION_PIN_NOT_SET: 'Create your 4-digit transaction PIN to move money.',
   DEMO_ACCOUNT: "This is a demo account, so money can't leave it.",
+  // Account deletion
+  LOAN_OUTSTANDING:
+    'Account deletion cannot be processed while you have an active loan or outstanding repayment balance. Please settle all pending dues before requesting deletion.',
+  APPLICATION_IN_PROGRESS:
+    'You have a loan application being reviewed or paid out. Wait for it to finish, or ask us to cancel it, before deleting your account.',
+  WALLET_NOT_EMPTY: 'You still have money in your wallet. Withdraw it to your bank account before deleting your account.',
+  WITHDRAWAL_PENDING: 'A withdrawal is still on its way to your bank. Try again once it has arrived.',
+  ACCOUNT_DELETION_BLOCKED: "Your account can't be deleted yet. Go back to see what needs to be settled first.",
+  DELETE_CONFIRMATION_REQUIRED: 'Type DELETE to confirm.',
+  ACCOUNT_CLOSED: 'The account for this BVN was deleted. To open a new one, please contact us.',
+  PHOTO_INVALID: 'Choose a JPG or PNG photo under 5 MB.',
   TRANSFERS_ON_HOLD:
     "For your security, money can't leave your account for 24 hours after signing in without your old phone.",
   // Platform

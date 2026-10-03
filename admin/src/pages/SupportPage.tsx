@@ -120,12 +120,19 @@ function SupportPageContent() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-[13px] font-semibold text-slate-900 truncate">{t.customer_name}</p>
-                      <StatusPill status={t.status} />
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {t.awaiting_reply && t.status !== 'resolved' ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 ring-1 ring-amber-200">
+                            Needs reply
+                          </span>
+                        ) : null}
+                        <StatusPill status={t.status} />
+                      </div>
                     </div>
                     <p className="text-[11px] text-slate-400 mt-0.5">
-                      {t.reference} · {CATEGORY[t.category] ?? t.category} · {new Date(t.created_at).toLocaleString()}
+                      {t.reference} · {CATEGORY[t.category] ?? t.category} · {new Date(t.updated_at ?? t.created_at).toLocaleString()}
                     </p>
-                    <p className="text-[12px] text-slate-600 mt-1 line-clamp-2">{t.message}</p>
+                    <p className="text-[12px] text-slate-600 mt-1 line-clamp-2">{(t.messages?.at(-1)?.body) ?? t.message}</p>
                   </button>
                 </li>
               ))}
@@ -185,9 +192,25 @@ function TicketDetail({
         <StatusPill status={ticket.status} />
       </div>
 
-      <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100">
-        <p className="text-[13px] text-slate-800 whitespace-pre-wrap">{ticket.message}</p>
-        <p className="text-[11px] text-slate-400 mt-2">{new Date(ticket.created_at).toLocaleString()}</p>
+      <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-1">
+        {(ticket.messages?.length
+          ? ticket.messages
+          : [{ id: 'first', author: 'customer' as const, author_name: 'Customer', body: ticket.message, created_at: ticket.created_at }]
+        ).map((m) => (
+          <div
+            key={m.id}
+            className={clsx(
+              'rounded-xl p-4 ring-1 max-w-[88%]',
+              m.author === 'staff' ? 'ml-auto bg-[#1b2f6b]/5 ring-[#1b2f6b]/10' : 'bg-slate-50 ring-slate-100',
+            )}
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              {m.author === 'staff' ? m.author_name : ticket.customer_name}
+            </p>
+            <p className="text-[13px] text-slate-800 whitespace-pre-wrap mt-1">{m.body}</p>
+            <p className="text-[11px] text-slate-400 mt-2">{new Date(m.created_at).toLocaleString()}</p>
+          </div>
+        ))}
       </div>
 
       <div className="flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-slate-500">
@@ -204,16 +227,6 @@ function TicketDetail({
         ) : null}
       </div>
 
-      {ticket.reply ? (
-        <div className="rounded-xl bg-[#1b2f6b]/5 p-4 ring-1 ring-[#1b2f6b]/10">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#1b2f6b]">Your reply</p>
-          <p className="text-[13px] text-slate-800 whitespace-pre-wrap mt-1">{ticket.reply}</p>
-          {ticket.replied_at ? (
-            <p className="text-[11px] text-slate-400 mt-2">{new Date(ticket.replied_at).toLocaleString()}</p>
-          ) : null}
-        </div>
-      ) : null}
-
       {error && <div className="px-4 py-3 rounded-xl bg-rose-50 text-rose-700 text-[13px] ring-1 ring-rose-200">{error}</div>}
 
       {canRespond ? (
@@ -222,7 +235,7 @@ function TicketDetail({
             value={reply}
             onChange={(e) => setReply(e.target.value)}
             rows={4}
-            placeholder={ticket.reply ? 'Send another reply (replaces the one the customer sees)…' : 'Write a reply. The customer gets a notification.'}
+            placeholder="Write a reply. The customer gets a notification and can reply back in the app."
             className="w-full text-[13px] rounded-xl ring-1 ring-slate-200 p-3 outline-none focus:ring-[#1b2f6b]/30"
           />
           <div className="flex flex-wrap gap-2">

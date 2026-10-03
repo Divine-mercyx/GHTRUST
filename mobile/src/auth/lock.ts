@@ -5,8 +5,7 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Platform } from 'react-native';
 
-/** Background time after which the app locks again (matches the staff portal). */
-export const RELOCK_AFTER_MS = 5 * 60 * 1000;
+// When the app locks again is the customer's choice: see lockPolicy.ts.
 
 export type BiometricKind = 'face' | 'fingerprint';
 

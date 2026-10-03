@@ -93,6 +93,25 @@ async def _prepare(engine) -> None:
         await session.commit()
 
 
+def _schema_is_stale() -> bool:
+    """create_all only adds missing tables, never columns: an older dev_local.db breaks
+    every request that reads a new column. Spot that before starting."""
+    import sqlite3
+    from contextlib import closing
+
+    import app.models.registry  # noqa: F401
+    from app.models import Base
+
+    if not DB_FILE.exists():
+        return False
+    with closing(sqlite3.connect(DB_FILE)) as conn:
+        for table in Base.metadata.sorted_tables:
+            have = {row[1] for row in conn.execute(f'PRAGMA table_info("{table.name}")')}
+            if have and not {c.name for c in table.columns} <= have:
+                return True
+    return False
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -110,6 +129,10 @@ def main() -> None:
     _configure_env(args.wallet)
     if args.reset and DB_FILE.exists():
         DB_FILE.unlink()
+    elif _schema_is_stale():
+        backup = DB_FILE.with_suffix(".db.bak")
+        DB_FILE.replace(backup)
+        print(f"\n  The dev database was built for older code; starting a fresh one (old copy: {backup.name}).")
 
     import fakeredis.aioredis
     import uvicorn

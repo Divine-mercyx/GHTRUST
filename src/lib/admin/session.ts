@@ -9,16 +9,26 @@
  *   Otherwise the sign-in screen shows and any leftover cookie session is ended.
  * - "Background": when no portal tab has been visible for BACKGROUND_LIMIT_MS,
  *   the session ends and re-authentication is required.
- * - "Idle": no keyboard/mouse/touch activity in any tab for IDLE_LIMIT_MS shows a
- *   countdown, then signs out.
+ * - "Idle": no keyboard/mouse/touch activity in any tab for the idle limit signs out,
+ *   with a countdown for the last IDLE_WARNING_MS. The limit comes from the server
+ *   (a super admin sets it; staff may choose shorter), and activity is reported to the
+ *   server, which enforces the same limit. The countdown runs from the last *reported*
+ *   activity so it matches the server's clock.
  * - Signing out in one tab signs out every tab.
  *
  * Only non-secret timestamps/flags are kept in storage; tokens never are.
  */
 
 export const BACKGROUND_LIMIT_MS = 5 * 60_000;
-export const IDLE_LIMIT_MS = 15 * 60_000;
 export const IDLE_WARNING_MS = 60_000;
+/** Report activity to the server at most this often (a trailing report always follows). */
+export const ACTIVITY_REPORT_MS = 30_000;
+
+let idleLimitMs = 30 * 60_000; // until the server says otherwise
+export const idleLimit = () => idleLimitMs;
+export function setIdleLimitMinutes(minutes: number) {
+  if (minutes > 0) idleLimitMs = minutes * 60_000;
+}
 
 const TAB_FLAG = "ghtrust_tab_signed_in"; // sessionStorage: this tab had a live session
 const VISIBLE_AT = "ghtrust_visible_at"; // localStorage: last time any portal tab was visible
@@ -96,7 +106,7 @@ export function idleFor(): number {
  */
 export async function mayResume(): Promise<boolean> {
   if (typeof window === "undefined") return false;
-  if (idleFor() > IDLE_LIMIT_MS + IDLE_WARNING_MS) return false;
+  if (idleFor() > idleLimitMs) return false;
   const tabFlag = safe(() => sessionStorage.getItem(TAB_FLAG) === "1", false);
   if (tabFlag && !backgroundExpired()) return true;
   return askOtherTabs();
@@ -131,9 +141,12 @@ function askOtherTabs(timeoutMs = 250): Promise<boolean> {
 export function startSessionWatch({
   onSignOut,
   onIdleWarning,
+  reportActivity,
 }: {
   onSignOut: (reason: SignOutReason) => void;
   onIdleWarning: (msLeft: number | null) => void;
+  /** Tell the server the staff member is active; resolves when it has recorded it. */
+  reportActivity: () => Promise<void>;
 }): () => void {
   const ch = bus();
   let warned = false;
@@ -143,29 +156,34 @@ export function startSessionWatch({
     ended = true;
     onSignOut(reason);
   };
-  let lastWrite = 0;
+  let lastReport = 0;
+  let pending = false;
+
+  const report = () => {
+    const sentAt = now();
+    lastReport = sentAt;
+    pending = false;
+    // The server's idle clock restarts when it records this; a 401 signs out via the API client.
+    reportActivity().then(() => writeTime(ACTIVE_AT, sentAt), () => undefined);
+  };
 
   const touchActive = () => {
-    const t = now();
-    if (t - lastWrite > 5_000) {
-      lastWrite = t;
-      writeTime(ACTIVE_AT, t);
-    }
-    if (warned) {
-      warned = false;
-      onIdleWarning(null);
-    }
+    // While the countdown shows, only "Stay signed in" keeps the session.
+    if (warned) return;
+    if (now() - lastReport >= ACTIVITY_REPORT_MS) report();
+    else pending = true;
   };
 
   const tick = () => {
     if (document.visibilityState === "visible") writeTime(VISIBLE_AT);
     else if (backgroundExpired()) return end("background");
 
+    if (pending && now() - lastReport >= ACTIVITY_REPORT_MS) report();
     const idle = idleFor();
-    if (idle > IDLE_LIMIT_MS + IDLE_WARNING_MS) return end("idle");
-    if (idle > IDLE_LIMIT_MS) {
+    if (idle >= idleLimitMs) return end("idle");
+    if (idle >= idleLimitMs - IDLE_WARNING_MS) {
       warned = true;
-      onIdleWarning(IDLE_LIMIT_MS + IDLE_WARNING_MS - idle);
+      onIdleWarning(idleLimitMs - idle);
     } else if (warned) {
       warned = false;
       onIdleWarning(null);
@@ -188,6 +206,7 @@ export function startSessionWatch({
   document.addEventListener("visibilitychange", onVisibility);
   ch?.addEventListener("message", onMessage);
   const interval = window.setInterval(tick, 1_000);
+  report(); // signing in, or resuming, counts as activity
   tick();
 
   return () => {

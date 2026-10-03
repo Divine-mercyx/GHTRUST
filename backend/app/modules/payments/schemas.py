@@ -97,7 +97,7 @@ class WalletTransactionResponse(BaseModel):
     """One movement of money in or out of the wallet, as the customer sees it."""
 
     id: str
-    kind: Literal["funding", "repayment", "withdrawal"]
+    kind: Literal["funding", "loan_payout", "repayment", "withdrawal"]
     direction: Literal["in", "out"]
     amount: float
     status: Literal["completed", "pending", "failed"]

@@ -2,6 +2,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
+import { withLockPaused } from '@/auth/lockPolicy';
+
 export type UploadFile = { uri: string; name: string; type: string };
 export type Source = 'camera' | 'library' | 'file';
 
@@ -24,11 +26,11 @@ async function compress(uri: string, width: number, height: number): Promise<Upl
 /** Returns null when the customer cancels. */
 export async function pickFile(source: Source): Promise<UploadFile | null> {
   if (source === 'file') {
-    const res = await DocumentPicker.getDocumentAsync({
+    const res = await withLockPaused(() => DocumentPicker.getDocumentAsync({
       type: ['application/pdf', 'image/jpeg', 'image/png'],
       copyToCacheDirectory: true,
       multiple: false,
-    });
+    }));
     if (res.canceled || !res.assets?.[0]) return null;
     const a = res.assets[0];
     if (a.size && a.size > MAX_BYTES) throw new PickError('That file is larger than 30 MB. Choose a smaller file.');
@@ -38,13 +40,15 @@ export async function pickFile(source: Source): Promise<UploadFile | null> {
   }
 
   if (source === 'camera') {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    const permission = await withLockPaused(() => ImagePicker.requestCameraPermissionsAsync());
     if (!permission.granted) {
       throw new PickError('Camera access is off. Allow it in Settings, or choose a photo instead.');
     }
   }
   const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1, allowsEditing: false, exif: false };
-  const res = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+  const res = await withLockPaused(() =>
+    source === 'camera' ? ImagePicker.launchCameraAsync(options) : ImagePicker.launchImageLibraryAsync(options),
+  );
   if (res.canceled || !res.assets?.[0]) return null;
   const a = res.assets[0];
   return compress(a.uri, a.width, a.height);

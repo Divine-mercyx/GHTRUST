@@ -7,6 +7,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import type { ApplicationSummary } from '@/api/types';
 import { useSession } from '@/auth/session';
 import { Card, SectionHeader } from '@/components/Card';
+import { Avatar } from '@/components/Avatar';
 import { HeroCard } from '@/components/home/HeroCard';
 import { PressableScale } from '@/components/home/PressableScale';
 import { QuickActionButton } from '@/components/home/QuickActionButton';
@@ -111,11 +112,15 @@ export default function Home() {
         </PressableScale>
         <PressableScale accessibilityRole="button" accessibilityLabel="Profile" onPress={() => router.push('/profile')}>
           <View style={styles.avatarRing}>
-            <View style={styles.avatar}>
-              <Text variant="bodyStrong" color={colors.white} style={{ fontFamily: font.bold }}>
-                {initials}
-              </Text>
-            </View>
+            {me.data ? (
+              <Avatar profile={me.data} size={44} />
+            ) : (
+              <View style={styles.avatar}>
+                <Text variant="bodyStrong" color={colors.white} style={{ fontFamily: font.bold }}>
+                  {initials}
+                </Text>
+              </View>
+            )}
           </View>
         </PressableScale>
       </View>

@@ -19,6 +19,9 @@ import type {
   Page,
   PendingApproval,
   Profile,
+  ProfilePhoto,
+  DeletionCheck,
+  AccountDeleted,
   Repayment,
   ResolvedAccount,
   SelfieRequired,
@@ -77,6 +80,12 @@ export const auth = {
   me: () => api.get<Profile>('/auth/me'),
   /** Email and home address only; identity fields come from the BVN record. */
   updateContact: (body: UpdateContact) => api.patch<Profile>('/auth/me', body),
+  photo: () => api.get<ProfilePhoto>('/auth/me/photo'),
+  setPhoto: (image: string) => api.put<Profile>('/auth/me/photo', { image }, { timeoutMs: 60_000 }),
+  removePhoto: () => api.delete<Profile>('/auth/me/photo'),
+  deletionCheck: () => api.get<DeletionCheck>('/auth/me/account-deletion'),
+  deleteAccount: (pin: string) =>
+    api.delete<AccountDeleted>('/auth/me', { body: { pin, confirmation: 'DELETE' } }),
   sessions: () => api.get<Session[]>('/auth/sessions'),
   revokeSession: (id: string) => api.delete<void>(`/auth/sessions/${id}`),
   logout: (forgetDevice = false) =>
@@ -196,6 +205,7 @@ export const support = {
   ticket: (id: string) => api.get<SupportTicket>(`/support/tickets/${id}`),
   create: (ticket: { category: TicketCategory; message: string; related_type?: TicketRelated; related_id?: string }) =>
     api.post<SupportTicket>('/support/tickets', ticket),
+  reply: (id: string, body: string) => api.post<SupportTicket>(`/support/tickets/${id}/messages`, { body }),
 };
 
 export const banks = {

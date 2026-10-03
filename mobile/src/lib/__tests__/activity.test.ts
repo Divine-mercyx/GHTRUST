@@ -76,3 +76,14 @@ describe('application status for customers', () => {
     expect(trackIndex('disbursed')).toBe(3);
   });
 });
+
+describe('loans paid into the wallet', () => {
+  it('show as money in, named after the loan', () => {
+    const row = fromTransaction(
+      tx({ kind: 'loan_payout', direction: 'in', status: 'completed', title: 'Loan paid out', loan_product: 'business_loan', loan_id: 'l1' }),
+    );
+    expect(row.direction).toBe('in');
+    expect(row.icon).toBe('cash');
+    expect(row.subtitle).toMatch(/Business/);
+  });
+});

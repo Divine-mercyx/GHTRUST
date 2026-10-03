@@ -11,6 +11,7 @@ import {
   Shield,
 } from 'lucide-react'
 import { AdminLayout } from '../components/AdminLayout'
+import { SessionTimeoutCard } from '../components/SessionTimeoutCard'
 import { PermissionGate } from '../components/PermissionGate'
 import { useAuth } from '../lib/auth'
 import { hasPermission } from '../lib/permissions'
@@ -27,6 +28,7 @@ import { ApiError } from '../lib/api'
 
 const tabs = [
   { id: 'system', label: 'System', icon: Server },
+  { id: 'security', label: 'Security', icon: Shield },
   { id: 'branches', label: 'Branches', icon: Building2 },
   { id: 'products', label: 'Products', icon: Package },
   { id: 'audit', label: 'Audit log', icon: FileText },
@@ -180,6 +182,12 @@ function SettingsPageContent() {
               Coming soon
             </span>
           </div>
+        </div>
+      )}
+
+      {activeTab === 'security' && (
+        <div className="max-w-2xl space-y-5">
+          <SessionTimeoutCard scope="organisation" />
         </div>
       )}
 
