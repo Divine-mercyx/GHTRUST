@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import clsx from 'clsx'
 import { Check, KeyRound, LogOut, PanelLeft, ShieldCheck, UserRound } from 'lucide-react'
 import { AdminLayout } from '../components/AdminLayout'
+import { SessionTimeoutCard } from '../components/SessionTimeoutCard'
 import { StaffAvatar } from '../components/StaffAvatar'
 import { DashCard } from '../components/ui'
 import { adminAuthApi, ApiError } from '../lib/api'
@@ -237,6 +238,7 @@ export function ProfilePage() {
             </div>
           )}
         </DashCard>
+        <SessionTimeoutCard scope="personal" />
       </div>
     </AdminLayout>
   )

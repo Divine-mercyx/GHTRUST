@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
+import { IdleGuard } from './IdleGuard'
 
 export function ProtectedRoute() {
   const { token, loading } = useAuth()
@@ -13,5 +14,10 @@ export function ProtectedRoute() {
   }
 
   if (!token) return <Navigate to="/login" replace />
-  return <Outlet />
+  return (
+    <>
+      <Outlet />
+      <IdleGuard />
+    </>
+  )
 }

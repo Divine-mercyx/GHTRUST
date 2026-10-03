@@ -26,6 +26,7 @@ from app.modules.payments.webhook_router import router as paystack_webhook_route
 from app.modules.investments.router import router as investments_router
 from app.modules.loans.router import router as loans_router
 from app.modules.admin.settings_router import router as admin_settings_router
+from app.modules.admin.session_router import router as admin_session_router
 from app.modules.savings.router import router as savings_router
 from app.modules.users.admin_router import router as admin_customers_router
 
@@ -37,6 +38,7 @@ api_v1_router.include_router(auth_account_router)
 api_v1_router.include_router(auth_security_router)
 api_v1_router.include_router(admin_router)
 api_v1_router.include_router(admin_settings_router)
+api_v1_router.include_router(admin_session_router)
 api_v1_router.include_router(admin_customers_router)
 api_v1_router.include_router(admin_loans_router)
 api_v1_router.include_router(admin_payments_router)

@@ -75,6 +75,7 @@ Generate secrets with `python -c "import secrets; print(secrets.token_urlsafe(48
 | `SUPPORT_PHONE`, `SUPPORT_EMAIL`, `SUPPORT_WHATSAPP`, `SUPPORT_HOURS` | shown in the app's Help screen |
 | `APP_MIN_VERSION_ANDROID` / `_IOS` | `1.0.0` at launch; raise to force an update |
 | `SENTRY_DSN` | optional, recommended |
+| `STAFF_SESSION_IDLE_MINUTES` | optional, default 30. After launch a super admin sets it in the portal (Settings → Security); see `docs/session-timeouts.md` |
 
 If anything required is missing, the api logs the exact list and **does not start**. That's
 deliberate; read the deploy log, fix the variables, redeploy.

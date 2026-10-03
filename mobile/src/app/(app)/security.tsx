@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Linking, Switch } from 'react-native';
@@ -5,6 +6,7 @@ import { Linking, Switch } from 'react-native';
 import { security } from '@/api/endpoints';
 import { messageFor } from '@/api/errors';
 import { biometricName } from '@/auth/lock';
+import { LOCK_CHOICES } from '@/auth/lockPolicy';
 import { useSession } from '@/auth/session';
 import { Card, Row, SectionHeader } from '@/components/Card';
 import { Screen } from '@/components/Screen';
@@ -17,7 +19,7 @@ import { colors, space } from '@/theme/tokens';
 
 export default function Security() {
   const me = useMe();
-  const { biometric, biometricAvailable, setBiometric } = useSession();
+  const { biometric, biometricAvailable, setBiometric, lockAfterMs, setLockAfter } = useSession();
   const [error, setError] = useState<string | null>(null);
   const [openedAt] = useState(() => Date.now());
   const [push, setPush] = useState<PushState | null>(null);
@@ -91,6 +93,35 @@ export default function Security() {
           />
         ) : null}
       </Card>
+
+      <SectionHeader title="Lock app" />
+      <Card style={{ paddingVertical: space.xs }}>
+        {LOCK_CHOICES.map((c, i) => {
+          const selected = c.ms === lockAfterMs;
+          return (
+            <Row
+              key={c.ms}
+              icon={c.ms === 0 ? 'lock-closed-outline' : 'time-outline'}
+              title={c.label}
+              subtitle={c.hint}
+              onPress={selected ? undefined : () => void setLockAfter(c.ms).catch(() => setError("We couldn't save that. Try again."))}
+              trailing={
+                selected ? (
+                  <Ionicons name="checkmark-circle" size={22} color={colors.cyanDeep} accessibilityLabel="Selected" />
+                ) : (
+                  <Ionicons name="ellipse-outline" size={22} color={colors.borderStrong} />
+                )
+              }
+              last={i === LOCK_CHOICES.length - 1}
+            />
+          );
+        })}
+      </Card>
+      <Text variant="small" muted style={{ paddingHorizontal: space.xs }}>
+        When you leave GH Trust for this long, you'll need your sign-in PIN
+        {biometric ? ` or ${biometricName(biometric)}` : ''} to get back in. The app also locks if it's open but untouched for
+        this long (at least 5 minutes).
+      </Text>
 
       <SectionHeader title="Transaction PIN" />
       <Card style={{ paddingVertical: space.xs }}>

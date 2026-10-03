@@ -959,6 +959,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/settings/security": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Session timeout settings */
+        get: operations["get_security_settings_api_v1_admin_settings_security_get"];
+        /**
+         * Change the staff idle timeout
+         * @description Super admins only. Applies to every staff member from their next request.
+         */
+        put: operations["update_security_settings_api_v1_admin_settings_security_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/auth/me/session-timeout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose a shorter timeout
+         * @description A staff member may sign out sooner than the organisation requires, never later.
+         */
+        put: operations["update_my_timeout_api_v1_admin_auth_me_session_timeout_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/auth/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record activity (staff portal)
+         * @description The portal calls this when the staff member actually does something (click, type,
+         *     navigate), at most about once a minute. Only this restarts the idle clock.
+         */
+        post: operations["record_activity_api_v1_admin_auth_activity_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/customers": {
         parameters: {
             query?: never;
@@ -2325,6 +2387,21 @@ export interface components {
              * Format: date-time
              */
             deleted_at: string;
+        };
+        /** ActivityResponse */
+        ActivityResponse: {
+            /** Effective Idle Minutes */
+            effective_idle_minutes: number;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
+            /**
+             * Idle Expires At
+             * Format: date-time
+             */
+            idle_expires_at: string;
         };
         /** AdminDashboardResponse */
         AdminDashboardResponse: {
@@ -4415,6 +4492,37 @@ export interface components {
             /** Body */
             body: string;
         };
+        /** SecuritySettingsResponse */
+        SecuritySettingsResponse: {
+            /**
+             * Staff Idle Minutes
+             * @description The organisation's idle timeout
+             */
+            staff_idle_minutes: number;
+            /** Min Minutes */
+            min_minutes: number;
+            /** Max Minutes */
+            max_minutes: number;
+            /** Updated At */
+            updated_at: string | null;
+            /** Updated By Name */
+            updated_by_name: string | null;
+            /**
+             * My Idle Minutes
+             * @description A shorter timeout this staff member chose, if any
+             */
+            my_idle_minutes: number | null;
+            /**
+             * Effective Idle Minutes
+             * @description What applies to this staff member
+             */
+            effective_idle_minutes: number;
+            /**
+             * Can Edit
+             * @description Super admins change the organisation's timeout
+             */
+            can_edit: boolean;
+        };
         /**
          * SelfieRequiredResponse
          * @description SMS code accepted; the account opens once a selfie matches the BVN photo.
@@ -4875,6 +4983,19 @@ export interface components {
             email?: string | null;
             /** Residential Address */
             residential_address?: string | null;
+        };
+        /** UpdateMyTimeoutRequest */
+        UpdateMyTimeoutRequest: {
+            /**
+             * Minutes
+             * @description null: use the organisation's
+             */
+            minutes?: number | null;
+        };
+        /** UpdateOrgTimeoutRequest */
+        UpdateOrgTimeoutRequest: {
+            /** Staff Idle Minutes */
+            staff_idle_minutes: number;
         };
         /** UpdatePayoutAccountRequest */
         UpdatePayoutAccountRequest: {
@@ -6960,6 +7081,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_security_settings_api_v1_admin_settings_security_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecuritySettingsResponse"];
+                };
+            };
+        };
+    };
+    update_security_settings_api_v1_admin_settings_security_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOrgTimeoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecuritySettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_my_timeout_api_v1_admin_auth_me_session_timeout_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMyTimeoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecuritySettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_activity_api_v1_admin_auth_activity_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityResponse"];
                 };
             };
         };

@@ -3,7 +3,9 @@
  *
  *   loading ──► signedOut ──(SMS code / PIN)──► signedIn ◄──(PIN / biometrics)── locked
  *                   ▲                              │                               ▲
- *                   └────── sign out / revoked ────┘────── 5 min in background ────┘
+ *                   └────── sign out / revoked ────┘── away / untouched too long ───┘
+ *
+ * How long is the customer's choice in Security ("Lock app", lockPolicy.ts).
  *
  * Start-up never waits on the network: a stored refresh token means the app opens to
  * the lock screen, and the first API call refreshes the access token.
@@ -19,7 +21,16 @@ import { configureClient, setAccessToken } from '@/api/client';
 import { auth } from '@/api/endpoints';
 import type { AuthTokens } from '@/api/types';
 
-import { biometricKind, RELOCK_AFTER_MS, type BiometricKind } from './lock';
+import { biometricKind, type BiometricKind } from './lock';
+import {
+  DEFAULT_LOCK_AFTER_MS,
+  inactiveFor,
+  lockPaused,
+  noteActivity,
+  parseLockAfter,
+  shouldLockAfterAway,
+  shouldLockWhenInactive,
+} from './lockPolicy';
 import { tokenStore } from './storage';
 
 export type SessionStatus = 'loading' | 'signedOut' | 'locked' | 'signedIn';
@@ -35,6 +46,9 @@ type SessionValue = {
   /** What this phone offers, whether or not it's turned on. */
   biometricAvailable: BiometricKind | null;
   setBiometric: (on: boolean) => Promise<void>;
+  /** How long the app may be away (or untouched) before it locks, in ms; 0 = immediately. */
+  lockAfterMs: number;
+  setLockAfter: (ms: number) => Promise<void>;
   gate: Gate;
   clearGate: () => void;
   signIn: (tokens: AuthTokens) => Promise<void>;
@@ -60,6 +74,12 @@ export function SessionProvider({ children }: PropsWithChildren) {
   const [biometricOn, setBiometricOn] = useState(false);
   const [available, setAvailable] = useState<BiometricKind | null>(null);
   const [gate, setGate] = useState<Gate>(null);
+  const [lockAfterMs, setLockAfterMs] = useState(DEFAULT_LOCK_AFTER_MS);
+  // Read by AppState and timer callbacks, which shouldn't re-subscribe on every change.
+  const lockAfterRef = useRef(DEFAULT_LOCK_AFTER_MS);
+  useEffect(() => {
+    lockAfterRef.current = lockAfterMs;
+  }, [lockAfterMs]);
   const backgroundedAt = useRef<number | null>(null);
 
   const reset = useCallback(
@@ -88,13 +108,15 @@ export function SessionProvider({ children }: PropsWithChildren) {
       onGate: (code, message) => setGate({ code, message }),
     });
     (async () => {
-      const [refresh, name, deviceToken, bio, kind] = await Promise.all([
+      const [refresh, name, deviceToken, bio, kind, lockAfter] = await Promise.all([
         tokenStore.getRefresh(),
         tokenStore.getName(),
         tokenStore.getDeviceToken(),
         tokenStore.getBiometric(),
         biometricKind(),
+        tokenStore.getLockAfter(),
       ]);
+      setLockAfterMs(parseLockAfter(lockAfter));
       setFirstName(name);
       setTrusted(!!deviceToken);
       setBiometricOn(bio);
@@ -103,22 +125,42 @@ export function SessionProvider({ children }: PropsWithChildren) {
     })();
   }, [queryClient]);
 
-  // Lock again after a long spell in the background; re-check biometrics on return
-  // (the customer may have removed their fingerprints in Settings meanwhile).
+  const lock = useCallback(() => setStatus((s) => (s === 'signedIn' ? 'locked' : s)), []);
+
+  // Lock after the chosen time away; re-check biometrics on return (the customer may
+  // have removed their fingerprints in Settings meanwhile). The app's own pickers and
+  // permission prompts pause this (lockPolicy.withLockPaused).
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
       if (next === 'background') {
-        backgroundedAt.current = Date.now();
+        backgroundedAt.current = lockPaused() ? null : Date.now();
       } else if (next === 'active') {
         biometricKind().then(setAvailable);
-        if (backgroundedAt.current) {
+        if (backgroundedAt.current && !lockPaused()) {
           const away = Date.now() - backgroundedAt.current;
-          backgroundedAt.current = null;
-          if (away > RELOCK_AFTER_MS) setStatus((s) => (s === 'signedIn' ? 'locked' : s));
+          if (shouldLockAfterAway(away, lockAfterRef.current)) lock();
         }
+        backgroundedAt.current = null;
+        noteActivity();
       }
     });
     return () => sub.remove();
+  }, [lock]);
+
+  // Lock when the app is open but nobody has touched it for the chosen time.
+  useEffect(() => {
+    if (status !== 'signedIn') return;
+    noteActivity();
+    const id = setInterval(() => {
+      if (AppState.currentState !== 'active' || lockPaused()) return;
+      if (shouldLockWhenInactive(inactiveFor(), lockAfterRef.current)) lock();
+    }, 10_000);
+    return () => clearInterval(id);
+  }, [status, lock]);
+
+  const setLockAfter = useCallback(async (ms: number) => {
+    await tokenStore.setLockAfter(ms);
+    setLockAfterMs(ms);
   }, []);
 
   const signIn = useCallback(
@@ -162,6 +204,8 @@ export function SessionProvider({ children }: PropsWithChildren) {
       biometric: biometricOn ? available : null,
       biometricAvailable: available,
       setBiometric,
+      lockAfterMs,
+      setLockAfter,
       gate,
       clearGate: () => setGate(null),
       signIn,
@@ -169,7 +213,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
       unlocked: () => setStatus('signedIn'),
       forget: () => signOut({ forget: true }),
     }),
-    [status, firstName, trusted, biometricOn, available, setBiometric, gate, signIn, signOut],
+    [status, firstName, trusted, biometricOn, available, setBiometric, lockAfterMs, setLockAfter, gate, signIn, signOut],
   );
 
   return <SessionContext value={value}>{children}</SessionContext>;

@@ -1,6 +1,8 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
+import { withLockPaused } from '@/auth/lockPolicy';
+
 export class PhotoError extends Error {}
 
 const SIZE = 512; // square, plenty for an avatar and small to upload
@@ -8,7 +10,7 @@ const SIZE = 512; // square, plenty for an avatar and small to upload
 /** Pick or take a square photo and shrink it to a small JPEG (base64), or null if cancelled. */
 export async function pickProfilePhoto(source: 'camera' | 'library'): Promise<string | null> {
   if (source === 'camera') {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    const permission = await withLockPaused(() => ImagePicker.requestCameraPermissionsAsync());
     if (!permission.granted) throw new PhotoError('Camera access is off. Allow it in Settings, or choose a photo instead.');
   }
   const options: ImagePicker.ImagePickerOptions = {
@@ -18,7 +20,9 @@ export async function pickProfilePhoto(source: 'camera' | 'library'): Promise<st
     quality: 1,
     exif: false,
   };
-  const res = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+  const res = await withLockPaused(() =>
+    source === 'camera' ? ImagePicker.launchCameraAsync(options) : ImagePicker.launchImageLibraryAsync(options),
+  );
   const asset = res.canceled ? null : res.assets?.[0];
   if (!asset) return null;
 

@@ -49,6 +49,31 @@ export const authApi = {
       ...COOKIE_TRANSPORT,
     }),
   me: () => api<StaffProfile>(`${V1}/admin/auth/me`),
+  /** Real activity: restarts the server's idle clock. */
+  activity: () =>
+    api<{ effective_idle_minutes: number; last_activity_at: string; idle_expires_at: string }>(
+      `${V1}/admin/auth/activity`,
+      { method: "POST" },
+    ),
+};
+
+export interface SecuritySettings {
+  staff_idle_minutes: number;
+  min_minutes: number;
+  max_minutes: number;
+  updated_at: string | null;
+  updated_by_name: string | null;
+  my_idle_minutes: number | null;
+  effective_idle_minutes: number;
+  can_edit: boolean;
+}
+
+export const securityApi = {
+  get: () => api<SecuritySettings>(`${V1}/admin/settings/security`),
+  setOrg: (minutes: number) =>
+    api<SecuritySettings>(`${V1}/admin/settings/security`, { method: "PUT", body: json({ staff_idle_minutes: minutes }) }),
+  setMine: (minutes: number | null) =>
+    api<SecuritySettings>(`${V1}/admin/auth/me/session-timeout`, { method: "PUT", body: json({ minutes }) }),
 };
 
 export const onboardingApi = {

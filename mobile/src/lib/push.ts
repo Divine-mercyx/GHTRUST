@@ -10,6 +10,8 @@ import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 
+import { withLockPaused } from '@/auth/lockPolicy';
+
 import { notifications } from '@/api/endpoints';
 import { pushOptOut } from '@/auth/storage';
 import { Notifications } from '@/lib/notificationsModule';
@@ -71,7 +73,10 @@ export async function enablePush(): Promise<PushState> {
   if (!pushSupported || !Notifications) return 'unsupported';
   await ensureChannel(); // Android 13+ shows the permission prompt once a channel exists
   let { status, canAskAgain } = await Notifications.getPermissionsAsync();
-  if (status !== 'granted' && canAskAgain) ({ status, canAskAgain } = await Notifications.requestPermissionsAsync());
+  const notifications = Notifications; // narrowed above; the closure below can't see that
+  if (status !== 'granted' && canAskAgain) {
+    ({ status, canAskAgain } = await withLockPaused(() => notifications.requestPermissionsAsync()));
+  }
   if (status !== 'granted') return canAskAgain ? 'off' : 'blocked';
   await pushOptOut.set(false);
   await registerToken();

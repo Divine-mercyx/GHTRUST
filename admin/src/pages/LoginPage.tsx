@@ -11,6 +11,7 @@ import { ApiError, adminAuthApi } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { AuthBrandPanel } from '../components/auth/AuthBrandPanel'
 import { OtpInput } from '../components/auth/OtpInput'
+import { takeSignOutReason } from '../lib/signOutReason'
 
 type Step = 'phone' | 'otp' | 'success'
 
@@ -47,6 +48,8 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [staffName, setStaffName] = useState('')
+  // Shown once: why the last session ended.
+  const [signedOutIdle] = useState(() => takeSignOutReason() === 'idle')
 
   useEffect(() => {
     if (resendIn <= 0) return
@@ -165,6 +168,12 @@ export function LoginPage() {
                   ? 'Sign in with your registered staff phone number'
                   : `Enter the 6-digit code sent to ${maskedPhone}`}
               </p>
+
+              {signedOutIdle && !error && step === 'phone' && (
+                <div className="mb-6 px-4 py-3 rounded-lg bg-amber-50 text-amber-800 text-sm border border-amber-100" role="status">
+                  You were signed out after a period of inactivity. Sign in again to continue.
+                </div>
+              )}
 
               {error && (
                 <div className="mb-6 px-4 py-3 rounded-lg bg-rose-50 text-rose-700 text-sm border border-rose-100 auth-shake">

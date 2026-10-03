@@ -3,7 +3,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { API_BASE, COOKIE_TRANSPORT, refreshAccessToken, tokenStore } from "./api";
 import { clearResourceCache } from "./cache";
-import { broadcastSignOut, hadSession, markTabSignedIn, mayResume, setHadSession, startSessionWatch, type SignOutReason } from "./session";
+import {
+  broadcastSignOut,
+  hadSession,
+  markTabSignedIn,
+  mayResume,
+  setHadSession,
+  setIdleLimitMinutes,
+  startSessionWatch,
+  type SignOutReason,
+} from "./session";
 import { authApi } from "./endpoints";
 import type { StaffProfile } from "./types";
 
@@ -183,6 +192,7 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
         else finishSignOut(reason); // another tab already ended the server session
       },
       onIdleWarning: setIdleWarningMs,
+      reportActivity: () => authApi.activity().then((r) => setIdleLimitMinutes(r.effective_idle_minutes)),
     });
   }, [signedIn, signOut, finishSignOut]);
 
@@ -198,6 +208,7 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
   const stayActive = useCallback(() => {
     markTabSignedIn(true); // refreshes the activity timestamps
     setIdleWarningMs(null);
+    void authApi.activity().catch(() => undefined); // restart the server's clock too
   }, []);
 
   const value = useMemo<AuthValue>(

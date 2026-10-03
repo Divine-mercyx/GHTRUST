@@ -49,7 +49,8 @@ class Settings(BaseSettings):
     staff_refresh_token_hours: int = 12
     # A staff session unused (no token refresh) for this long can't be refreshed:
     # the next launch or wake-up goes to the sign-in screen.
-    staff_session_idle_minutes: int = 20
+    # Default staff idle timeout; a super admin can change it in the portal (5-60 minutes).
+    staff_session_idle_minutes: int = 30
     # Web portal: refresh token travels only in this httpOnly cookie (never readable by JS).
     staff_refresh_cookie_name: str = "ghtrust_staff_rt"
     # Seconds during which presenting the just-rotated refresh token is treated

@@ -1,3 +1,5 @@
+import { setSignOutReason } from './signOutReason'
+
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
 export { API_BASE }
@@ -114,7 +116,11 @@ async function refreshAccessToken(): Promise<boolean> {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refresh_token: refreshToken }),
         })
-        if (!res.ok) return false
+        if (!res.ok) {
+          const err = await parseError(res)
+          if (err.code === 'SESSION_IDLE_TIMEOUT') setSignOutReason('idle')
+          return false
+        }
         const data = (await res.json()) as { access_token: string; refresh_token: string }
         tokenStore.set(data.access_token, data.refresh_token)
         return true
@@ -149,7 +155,8 @@ export async function apiFetch<T>(
       if (err.code === 'TOKEN_INVALID' && !retried && (await refreshAccessToken())) {
         return apiFetch<T>(path, options, tokenStore.access, true)
       }
-      // Revoked session, deactivated account, or refresh failed: sign out.
+      // Revoked session, deactivated account, idle too long, or refresh failed: sign out.
+      if (err.code === 'SESSION_IDLE_TIMEOUT') setSignOutReason('idle')
       tokenStore.clear()
     }
     throw new ApiError(err.message, res.status, err.code, err.detail)

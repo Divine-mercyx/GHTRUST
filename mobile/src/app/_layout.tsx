@@ -15,6 +15,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { SessionProvider, useSession } from '@/auth/session';
+import { noteActivity } from '@/auth/lockPolicy';
+import { PrivacyCover } from '@/components/PrivacyCover';
 import { AnimatedSplash } from '@/components/AnimatedSplash';
 import { BlockingScreen } from '@/components/BlockingScreen';
 import { loadIntro, useIntroSeen } from '@/lib/intro';
@@ -50,7 +52,8 @@ function RootLayout() {
   });
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    // Any touch counts as activity for the inactivity lock (lockPolicy.ts).
+    <GestureHandlerRootView style={{ flex: 1 }} onTouchStart={noteActivity}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <SessionProvider>
@@ -86,6 +89,7 @@ function Shell({ ready }: { ready: boolean }) {
     <>
       {booting ? null : <Screens status={status} gate={gate} clearGate={clearGate} config={config} />}
       {ready && !splashDone ? <AnimatedSplash ready={!booting} onDone={() => setSplashDone(true)} /> : null}
+      {status === 'signedIn' || status === 'locked' ? <PrivacyCover /> : null}
     </>
   );
 }

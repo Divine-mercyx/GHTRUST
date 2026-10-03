@@ -2501,6 +2501,151 @@
     }
    }
   },
+  "/api/v1/admin/settings/security": {
+   "get": {
+    "tags": [
+     "Admin \u2014 Session timeout"
+    ],
+    "summary": "Session timeout settings",
+    "operationId": "get_security_settings_api_v1_admin_settings_security_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SecuritySettingsResponse"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "Admin \u2014 Session timeout"
+    ],
+    "summary": "Change the staff idle timeout",
+    "description": "Super admins only. Applies to every staff member from their next request.",
+    "operationId": "update_security_settings_api_v1_admin_settings_security_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/UpdateOrgTimeoutRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SecuritySettingsResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/admin/auth/me/session-timeout": {
+   "put": {
+    "tags": [
+     "Admin \u2014 Session timeout"
+    ],
+    "summary": "Choose a shorter timeout",
+    "description": "A staff member may sign out sooner than the organisation requires, never later.",
+    "operationId": "update_my_timeout_api_v1_admin_auth_me_session_timeout_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/UpdateMyTimeoutRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SecuritySettingsResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/admin/auth/activity": {
+   "post": {
+    "tags": [
+     "Admin \u2014 Session timeout"
+    ],
+    "summary": "Record activity (staff portal)",
+    "description": "The portal calls this when the staff member actually does something (click, type,\nnavigate), at most about once a minute. Only this restarts the idle clock.",
+    "operationId": "record_activity_api_v1_admin_auth_activity_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ActivityResponse"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
   "/api/v1/admin/customers": {
    "get": {
     "tags": [
@@ -6439,6 +6584,31 @@
      "deleted_at"
     ],
     "title": "AccountDeletedResponse"
+   },
+   "ActivityResponse": {
+    "properties": {
+     "effective_idle_minutes": {
+      "type": "integer",
+      "title": "Effective Idle Minutes"
+     },
+     "last_activity_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Last Activity At"
+     },
+     "idle_expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Idle Expires At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "effective_idle_minutes",
+     "last_activity_at",
+     "idle_expires_at"
+    ],
+    "title": "ActivityResponse"
    },
    "AdminDashboardResponse": {
     "properties": {
@@ -12638,6 +12808,80 @@
     ],
     "title": "SectionResponse"
    },
+   "SecuritySettingsResponse": {
+    "properties": {
+     "staff_idle_minutes": {
+      "type": "integer",
+      "title": "Staff Idle Minutes",
+      "description": "The organisation's idle timeout"
+     },
+     "min_minutes": {
+      "type": "integer",
+      "title": "Min Minutes"
+     },
+     "max_minutes": {
+      "type": "integer",
+      "title": "Max Minutes"
+     },
+     "updated_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Updated At"
+     },
+     "updated_by_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Updated By Name"
+     },
+     "my_idle_minutes": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "My Idle Minutes",
+      "description": "A shorter timeout this staff member chose, if any"
+     },
+     "effective_idle_minutes": {
+      "type": "integer",
+      "title": "Effective Idle Minutes",
+      "description": "What applies to this staff member"
+     },
+     "can_edit": {
+      "type": "boolean",
+      "title": "Can Edit",
+      "description": "Super admins change the organisation's timeout"
+     }
+    },
+    "type": "object",
+    "required": [
+     "staff_idle_minutes",
+     "min_minutes",
+     "max_minutes",
+     "updated_at",
+     "updated_by_name",
+     "my_idle_minutes",
+     "effective_idle_minutes",
+     "can_edit"
+    ],
+    "title": "SecuritySettingsResponse"
+   },
    "SelfieRequiredResponse": {
     "properties": {
      "status": {
@@ -14097,6 +14341,41 @@
     "type": "object",
     "title": "UpdateContactRequest",
     "description": "Contact details a customer may change in the app. Name, BVN, date of birth and\nphone come from the BVN record (phone changes go through new-phone approval),\nso they are not editable here."
+   },
+   "UpdateMyTimeoutRequest": {
+    "properties": {
+     "minutes": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 60.0,
+        "minimum": 5.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Minutes",
+      "description": "null: use the organisation's"
+     }
+    },
+    "type": "object",
+    "title": "UpdateMyTimeoutRequest"
+   },
+   "UpdateOrgTimeoutRequest": {
+    "properties": {
+     "staff_idle_minutes": {
+      "type": "integer",
+      "maximum": 60.0,
+      "minimum": 5.0,
+      "title": "Staff Idle Minutes"
+     }
+    },
+    "type": "object",
+    "required": [
+     "staff_idle_minutes"
+    ],
+    "title": "UpdateOrgTimeoutRequest"
    },
    "UpdatePayoutAccountRequest": {
     "properties": {

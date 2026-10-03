@@ -14,7 +14,7 @@ const RESEND_AFTER = 30;
 
 const SIGN_OUT_MESSAGES = {
   background: "The portal was in the background for more than 5 minutes. Sign in again to continue.",
-  idle: "There was no activity for 15 minutes, so we ended your session to protect customer data.",
+  idle: "There was no activity for a while, so we ended your session to protect customer data.",
   expired: "Your session ended. Sign in again to continue.",
   manual: "",
 } as const;

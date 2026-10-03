@@ -86,6 +86,7 @@ def _test_env(monkeypatch):
     monkeypatch.setenv("DOJAH_MOCK_PHONE", "")
     # Optional modules off unless a test switches them on (backend/.env may enable them).
     monkeypatch.setenv("FEATURE_FLAGS", "")
+    monkeypatch.setenv("STAFF_SESSION_IDLE_MINUTES", "30")
     # Most tests open accounts in one step; the selfie step has its own tests.
     monkeypatch.setenv("DOJAH_SELFIE_REQUIRED", "false")
     monkeypatch.setenv("SECRET_KEY", "test-secret-key-for-jwt-and-otp-hashing")

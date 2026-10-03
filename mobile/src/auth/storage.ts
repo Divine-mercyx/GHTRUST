@@ -16,6 +16,7 @@ const INTRO_KEY = 'ghtrust.intro_seen';
 const DEVICE_TOKEN_KEY = 'ghtrust.device_token';
 const BIOMETRIC_KEY = 'ghtrust.biometric';
 const PUSH_OFF_KEY = 'ghtrust.push_off';
+const LOCK_AFTER_KEY = 'ghtrust.lock_after_ms';
 
 const OPTIONS: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
@@ -70,11 +71,16 @@ export const tokenStore = {
     await remove(DEVICE_TOKEN_KEY);
     await remove(NAME_KEY);
     await remove(BIOMETRIC_KEY);
+    await remove(LOCK_AFTER_KEY);
   },
 
   /** The customer chose to unlock with Face ID / fingerprint on this phone. */
   getBiometric: async () => (await get(BIOMETRIC_KEY)) === '1',
   setBiometric: (on: boolean) => (on ? set(BIOMETRIC_KEY, '1') : remove(BIOMETRIC_KEY)),
+
+  /** How long the app may be away before it locks (see lockPolicy.ts); raw stored value. */
+  getLockAfter: () => get(LOCK_AFTER_KEY),
+  setLockAfter: (ms: number) => set(LOCK_AFTER_KEY, String(ms)),
 };
 
 /** The customer switched push notifications off in the app (the OS permission may still be on). */
