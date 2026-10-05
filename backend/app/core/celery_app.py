@@ -49,6 +49,11 @@ celery_app.conf.update(
             "task": "app.workers.tasks.send_loan_reminders",
             "schedule": crontab(hour=8, minute=0),
         },
+        # Hourly, so an investment maturing today is paid early that day (idempotent).
+        "pay-out-investments": {
+            "task": "app.workers.tasks.pay_out_investments",
+            "schedule": crontab(minute=5),
+        },
         "deliver-notifications": {
             "task": "app.workers.tasks.deliver_notifications",
             "schedule": crontab(minute="*"),

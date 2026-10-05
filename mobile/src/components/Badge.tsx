@@ -6,11 +6,11 @@ import { colors, radius } from '@/theme/tokens';
 import { Text } from './Text';
 
 const TONES: Record<Tone, { bg: string; fg: string }> = {
-  neutral: { bg: colors.surfaceNav, fg: colors.textMuted },
+  neutral: { bg: colors.slateFill, fg: colors.slate },
   info: { bg: '#E4F3FA', fg: colors.cyanDeep },
   progress: { bg: '#E8ECF7', fg: colors.navy },
   success: { bg: colors.successBg, fg: colors.success },
-  warning: { bg: colors.warningBg, fg: colors.warning },
+  warning: { bg: colors.pendingBg, fg: colors.pending },
   danger: { bg: colors.errorBg, fg: colors.error },
 };
 

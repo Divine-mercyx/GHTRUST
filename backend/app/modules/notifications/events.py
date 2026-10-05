@@ -221,3 +221,26 @@ async def send_repayment_reminders(db: AsyncSession, today: date) -> int:
         )
         queued += created is not None
     return queued
+
+
+async def investment_started(db: AsyncSession, investment, plan_name: str) -> None:
+    await NotificationService(db).notify(
+        investment.customer_id,
+        "investment_started",
+        "Your investment has started",
+        f"{naira(investment.amount)} in {plan_name}. It matures on {investment.maturity_date:%d %b %Y} "
+        f"and pays {naira(investment.amount + investment.projected_return)} into your wallet.",
+        route="/investments",
+        dedupe_key=f"investment_started:{investment.id}",
+    )
+
+
+async def investment_matured(db: AsyncSession, investment, plan_name: str) -> None:
+    await NotificationService(db).notify(
+        investment.customer_id,
+        "investment_matured",
+        "Your investment has matured",
+        f"{naira(investment.payout_amount)} from {plan_name} has been paid into your wallet.",
+        route="/investments",
+        dedupe_key=f"investment_matured:{investment.id}",
+    )

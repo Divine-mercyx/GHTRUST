@@ -12,6 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { SessionProvider, useSession } from '@/auth/session';
@@ -55,12 +56,14 @@ function RootLayout() {
     // Any touch counts as activity for the inactivity lock (lockPolicy.ts).
     <GestureHandlerRootView style={{ flex: 1 }} onTouchStart={noteActivity}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <SessionProvider>
-            <StatusBar style="dark" />
-            <Shell ready={fontsLoaded || !!fontError} />
-          </SessionProvider>
-        </QueryClientProvider>
+        <KeyboardProvider>
+          <QueryClientProvider client={queryClient}>
+            <SessionProvider>
+              <StatusBar style="dark" />
+              <Shell ready={fontsLoaded || !!fontError} />
+            </SessionProvider>
+          </QueryClientProvider>
+        </KeyboardProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

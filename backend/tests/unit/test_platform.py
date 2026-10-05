@@ -66,7 +66,7 @@ class TestProductionGuard:
             ({"monnify_secret_key": ""}, "Webhook signing secret"),
             ({"cors_origins": "http://localhost:5173"}, "localhost"),
             ({"feature_flags": "wallet,savings"}, "savings"),
-            ({"feature_flags": "investments"}, "FEATURE_FLAGS"),
+            ({"feature_flags": "food_basket"}, "FEATURE_FLAGS"),
             ({"demo_phones": "08011112222"}, "DEMO_OTP must be"),
             ({"demo_phones": "08011112222", "demo_otp": "123456"}, "guessable"),
         ],

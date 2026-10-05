@@ -39,6 +39,7 @@ export default function TabsLayout() {
       }}>
       <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: icon('home-outline', 'home') }} />
       <Tabs.Screen name="loans" options={{ title: 'Loans', tabBarIcon: icon('document-text-outline', 'document-text') }} />
+      <Tabs.Screen name="invest" options={{ title: 'Invest', tabBarIcon: icon('trending-up-outline', 'trending-up') }} />
       <Tabs.Screen
         name="wallet"
         options={{ title: 'Wallet', href: wallet ? undefined : null, tabBarIcon: icon('wallet-outline', 'wallet') }}

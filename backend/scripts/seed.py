@@ -25,8 +25,7 @@ from app.modules.admin.service import seed_super_admin  # noqa: E402
 from app.modules.auth.demo_accounts import DemoSeedError, seed_demo_customers  # noqa: E402
 from app.modules.food_basket.models import FoodBasketPlan  # noqa: E402
 from app.modules.food_basket.schemas import FoodBasketPlanType  # noqa: E402
-from app.modules.investments.models import InvestmentPlan  # noqa: E402
-from app.modules.investments.schemas import RiskLevel  # noqa: E402
+from app.modules.investments.seed import seed_sample_plans  # noqa: E402
 from app.modules.loans.service import seed_loan_products  # noqa: E402
 from app.modules.loans.workflow_seed import seed_default_workflows  # noqa: E402
 from app.modules.savings.models import SavingsProduct  # noqa: E402
@@ -39,11 +38,6 @@ SAVINGS_PRODUCTS = [
     dict(name="Save to Invest", product_type=SavingsProductType.SAVE_TO_INVEST, interest_rate=Decimal("7.5"), min_deposit=Decimal("10000"), description="Interest converts to investment capital"),
 ]
 
-INVESTMENT_PLANS = [
-    dict(name="Secure Growth Fund", min_amount=Decimal("50000"), return_rate=Decimal("14"), tenure_months=12, risk=RiskLevel.LOW, description="Conservative treasury-backed fund"),
-    dict(name="Balanced Portfolio", min_amount=Decimal("100000"), return_rate=Decimal("18"), tenure_months=18, risk=RiskLevel.MEDIUM, description="Mixed bonds and commercial paper"),
-    dict(name="High Yield Fund", min_amount=Decimal("250000"), return_rate=Decimal("24"), tenure_months=24, risk=RiskLevel.HIGH, description="SME lending returns"),
-]
 
 FOOD_BASKET_PLANS = [
     dict(name="Basic Basket", plan_type=FoodBasketPlanType.BASIC, monthly_price=Decimal("15000"), description="Essential household items", items_included=["Rice 5kg", "Oil 1L", "Tomato paste", "Spaghetti"]),
@@ -109,7 +103,7 @@ async def seed() -> None:
         await seed_loan_products(session)
         await seed_default_workflows(session)
         savings = await _seed_by_name(session, SavingsProduct, SAVINGS_PRODUCTS)
-        investments = await _seed_by_name(session, InvestmentPlan, INVESTMENT_PLANS)
+        investments = await seed_sample_plans(session)
         food = await _seed_by_name(session, FoodBasketPlan, FOOD_BASKET_PLANS)
         # After the super admin, so a staff number in DEMO_PHONES isn't made a customer.
         demo = await seed_demo_customers(session)

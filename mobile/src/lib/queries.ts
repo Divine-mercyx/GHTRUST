@@ -2,7 +2,7 @@ import { QueryClient, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 import { ApiError } from '@/api/errors';
 import type { TransactionDirection } from '@/api/types';
-import { appConfig, auth, banks, legal, loans, notifications, support, wallet } from '@/api/endpoints';
+import { appConfig, auth, banks, investments, legal, loans, notifications, support, wallet } from '@/api/endpoints';
 
 export const keys = {
   config: ['config'] as const,
@@ -28,6 +28,8 @@ export const keys = {
   transactionList: (direction?: TransactionDirection) => ['transactions', 'list', direction ?? 'all'] as const,
   transaction: (id: string) => ['transactions', id] as const,
   banks: ['banks'] as const,
+  investmentPlans: ['investments', 'plans'] as const,
+  investments: ['investments', 'mine'] as const,
 };
 
 export function makeQueryClient() {
@@ -53,8 +55,13 @@ export const useAppConfig = () =>
 export function useFeatures() {
   const { data } = useAppConfig();
   const f = (data?.features ?? {}) as Record<string, boolean>;
-  return { wallet: !!f.wallet, support: data?.support };
+  return { wallet: !!f.wallet, investments: !!f.investments, support: data?.support };
 }
+
+export const useInvestmentPlans = () =>
+  useQuery({ queryKey: keys.investmentPlans, queryFn: investments.plans, staleTime: 5 * 60_000 });
+export const useMyInvestments = (enabled = true) =>
+  useQuery({ queryKey: keys.investments, queryFn: investments.mine, enabled });
 
 export const useMe = () => useQuery({ queryKey: keys.me, queryFn: auth.me, staleTime: 5 * 60_000 });
 /** The profile photo (chosen, else from the BVN record); refetched when `photo_version` changes. */

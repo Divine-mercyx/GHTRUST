@@ -4878,6 +4878,46 @@
     }
    }
   },
+  "/api/v1/investments/plans/{plan_id}/image": {
+   "get": {
+    "tags": [
+     "Investments"
+    ],
+    "summary": "A plan's picture",
+    "operationId": "plan_image_api_v1_investments_plans__plan_id__image_get",
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/investments/calculator": {
    "post": {
     "tags": [
@@ -4953,6 +4993,7 @@
      "Investments"
     ],
     "summary": "Create My Investment",
+    "description": "Invest wallet money in a plan. Needs the transaction PIN; send an Idempotency-Key.",
     "operationId": "create_my_investment_api_v1_investments_me_post",
     "requestBody": {
      "content": {
@@ -4991,6 +5032,318 @@
       "HTTPBearer": []
      }
     ]
+   }
+  },
+  "/api/v1/admin/investments/plans": {
+   "get": {
+    "tags": [
+     "Admin \u2014 Investments"
+    ],
+    "summary": "Admin List Plans",
+    "operationId": "admin_list_plans_api_v1_admin_investments_plans_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/AdminPlanResponse"
+         },
+         "type": "array",
+         "title": "Response Admin List Plans Api V1 Admin Investments Plans Get"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "Admin \u2014 Investments"
+    ],
+    "summary": "Admin Create Plan",
+    "operationId": "admin_create_plan_api_v1_admin_investments_plans_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CreatePlanRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AdminPlanResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/admin/investments/plans/{plan_id}": {
+   "patch": {
+    "tags": [
+     "Admin \u2014 Investments"
+    ],
+    "summary": "Admin Update Plan",
+    "description": "Changes apply to new investments; existing ones keep the rate they were bought at.",
+    "operationId": "admin_update_plan_api_v1_admin_investments_plans__plan_id__patch",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/UpdatePlanRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AdminPlanResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/investments/plans/{plan_id}/image": {
+   "put": {
+    "tags": [
+     "Admin \u2014 Investments"
+    ],
+    "summary": "Admin Set Plan Image",
+    "operationId": "admin_set_plan_image_api_v1_admin_investments_plans__plan_id__image_put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PlanImageRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AdminPlanResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "Admin \u2014 Investments"
+    ],
+    "summary": "Admin Remove Plan Image",
+    "operationId": "admin_remove_plan_image_api_v1_admin_investments_plans__plan_id__image_delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AdminPlanResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/investments/holdings": {
+   "get": {
+    "tags": [
+     "Admin \u2014 Investments"
+    ],
+    "summary": "Admin Holdings",
+    "operationId": "admin_holdings_api_v1_admin_investments_holdings_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(active|paid_out)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 200,
+       "minimum": 1,
+       "default": 50,
+       "title": "Limit"
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Offset"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AdminHoldingsPage"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
    }
   },
   "/api/v1/contributions/groups": {
@@ -5262,6 +5615,100 @@
       "HTTPBearer": []
      }
     ]
+   }
+  },
+  "/api/v1/wallet/fund/card": {
+   "post": {
+    "tags": [
+     "Wallet"
+    ],
+    "summary": "Start Card Funding",
+    "description": "Top up the wallet with a debit card. Open `checkout_url` in a browser; when the customer\nfinishes, the page goes to `return_url`. Then poll GET /wallet/fund/card/{reference}.",
+    "operationId": "start_card_funding_api_v1_wallet_fund_card_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CardFundRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CardFundResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/wallet/fund/card/{reference}": {
+   "get": {
+    "tags": [
+     "Wallet"
+    ],
+    "summary": "Card Funding Status",
+    "operationId": "card_funding_status_api_v1_wallet_fund_card__reference__get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "reference",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Reference"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CardFundResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
    }
   },
   "/api/v1/wallet/transactions": {
@@ -6196,6 +6643,53 @@
     }
    }
   },
+  "/api/v1/support/tickets/{ticket_id}/read": {
+   "post": {
+    "tags": [
+     "Support"
+    ],
+    "summary": "I've read the replies",
+    "operationId": "read_ticket_api_v1_support_tickets__ticket_id__read_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "ticket_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ticket Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TicketResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/admin/support/tickets": {
    "get": {
     "tags": [
@@ -6311,6 +6805,53 @@
       }
      }
     },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AdminTicketResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/support/tickets/{ticket_id}/read": {
+   "post": {
+    "tags": [
+     "Support"
+    ],
+    "summary": "Mark the customer read",
+    "operationId": "admin_read_ticket_api_v1_admin_support_tickets__ticket_id__read_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "ticket_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ticket Id"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "description": "Successful Response",
@@ -6681,6 +7222,215 @@
      "demographics"
     ],
     "title": "AdminDashboardResponse"
+   },
+   "AdminHoldingResponse": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "reference": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reference"
+     },
+     "customer_id": {
+      "type": "string",
+      "title": "Customer Id"
+     },
+     "customer_name": {
+      "type": "string",
+      "title": "Customer Name"
+     },
+     "plan_name": {
+      "type": "string",
+      "title": "Plan Name"
+     },
+     "amount": {
+      "type": "string",
+      "title": "Amount"
+     },
+     "return_rate": {
+      "type": "string",
+      "title": "Return Rate"
+     },
+     "projected_return": {
+      "type": "string",
+      "title": "Projected Return"
+     },
+     "start_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Start Date"
+     },
+     "maturity_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Maturity Date"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "paid_out_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Paid Out At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "reference",
+     "customer_id",
+     "customer_name",
+     "plan_name",
+     "amount",
+     "return_rate",
+     "projected_return",
+     "start_date",
+     "maturity_date",
+     "status",
+     "paid_out_at"
+    ],
+    "title": "AdminHoldingResponse"
+   },
+   "AdminHoldingsPage": {
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/AdminHoldingResponse"
+      },
+      "type": "array",
+      "title": "Items"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "active_amount": {
+      "type": "string",
+      "title": "Active Amount"
+     },
+     "due_in_30_days": {
+      "type": "string",
+      "title": "Due In 30 Days"
+     }
+    },
+    "type": "object",
+    "required": [
+     "items",
+     "total",
+     "active_amount",
+     "due_in_30_days"
+    ],
+    "title": "AdminHoldingsPage"
+   },
+   "AdminPlanResponse": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "min_amount": {
+      "type": "string",
+      "title": "Min Amount"
+     },
+     "max_amount": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Max Amount"
+     },
+     "return_rate": {
+      "type": "string",
+      "title": "Return Rate",
+      "description": "% a year, simple interest"
+     },
+     "tenure_months": {
+      "type": "integer",
+      "title": "Tenure Months"
+     },
+     "risk": {
+      "$ref": "#/components/schemas/RiskLevel"
+     },
+     "description": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Description"
+     },
+     "is_active": {
+      "type": "boolean",
+      "title": "Is Active",
+      "default": true
+     },
+     "image_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Image Url",
+      "description": "Path of the plan's picture (changes when it changes)"
+     },
+     "active_investors": {
+      "type": "integer",
+      "title": "Active Investors",
+      "default": 0
+     },
+     "active_amount": {
+      "type": "string",
+      "title": "Active Amount",
+      "default": "0"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "min_amount",
+     "return_rate",
+     "tenure_months",
+     "risk",
+     "created_at"
+    ],
+    "title": "AdminPlanResponse"
    },
    "AdminSettingsResponse": {
     "properties": {
@@ -7819,6 +8569,79 @@
     ],
     "title": "BvnRegisterRequest"
    },
+   "CardFundRequest": {
+    "properties": {
+     "amount": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 1000000.0,
+        "minimum": 100.0
+       },
+       {
+        "type": "string"
+       }
+      ],
+      "title": "Amount"
+     }
+    },
+    "type": "object",
+    "required": [
+     "amount"
+    ],
+    "title": "CardFundRequest"
+   },
+   "CardFundResponse": {
+    "properties": {
+     "reference": {
+      "type": "string",
+      "title": "Reference"
+     },
+     "amount": {
+      "type": "string",
+      "title": "Amount"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "pending",
+       "completed",
+       "failed",
+       "reversed"
+      ],
+      "title": "Status"
+     },
+     "checkout_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Checkout Url"
+     },
+     "return_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Return Url"
+     }
+    },
+    "type": "object",
+    "required": [
+     "reference",
+     "amount",
+     "status"
+    ],
+    "title": "CardFundResponse"
+   },
    "ChangeLoginPinRequest": {
     "properties": {
      "current_pin": {
@@ -8311,6 +9134,91 @@
     ],
     "title": "CreateLoanProductRequest",
     "description": "A new product, created switched off. Steps, documents and cadences are limited to the\nones the customer app and servicing engine understand; switching it on requires a\npublished approval workflow."
+   },
+   "CreatePlanRequest": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 100,
+      "minLength": 3,
+      "title": "Name"
+     },
+     "description": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Description"
+     },
+     "min_amount": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "string"
+       }
+      ],
+      "title": "Min Amount"
+     },
+     "max_amount": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Max Amount"
+     },
+     "return_rate": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 100.0,
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "string"
+       }
+      ],
+      "title": "Return Rate"
+     },
+     "tenure_months": {
+      "type": "integer",
+      "maximum": 60.0,
+      "minimum": 1.0,
+      "title": "Tenure Months"
+     },
+     "risk": {
+      "$ref": "#/components/schemas/RiskLevel",
+      "default": "low"
+     },
+     "is_active": {
+      "type": "boolean",
+      "title": "Is Active",
+      "default": true
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "min_amount",
+     "return_rate",
+     "tenure_months"
+    ],
+    "title": "CreatePlanRequest"
    },
    "CreateTicketRequest": {
     "properties": {
@@ -10165,12 +11073,19 @@
        }
       ],
       "title": "Amount"
+     },
+     "transaction_pin": {
+      "type": "string",
+      "maxLength": 4,
+      "minLength": 4,
+      "title": "Transaction Pin"
      }
     },
     "type": "object",
     "required": [
      "plan_id",
-     "amount"
+     "amount",
+     "transaction_pin"
     ],
     "title": "InvestRequest"
    },
@@ -10256,9 +11171,21 @@
       "type": "string",
       "title": "Min Amount"
      },
+     "max_amount": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Max Amount"
+     },
      "return_rate": {
       "type": "string",
-      "title": "Return Rate"
+      "title": "Return Rate",
+      "description": "% a year, simple interest"
      },
      "tenure_months": {
       "type": "integer",
@@ -10282,6 +11209,18 @@
       "type": "boolean",
       "title": "Is Active",
       "default": true
+     },
+     "image_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Image Url",
+      "description": "Path of the plan's picture (changes when it changes)"
      }
     },
     "type": "object",
@@ -10301,13 +11240,35 @@
       "type": "string",
       "title": "Id"
      },
-     "customer_id": {
+     "reference": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reference"
+     },
+     "plan_id": {
       "type": "string",
-      "title": "Customer Id"
+      "title": "Plan Id"
      },
      "plan_name": {
       "type": "string",
       "title": "Plan Name"
+     },
+     "image_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Image Url"
      },
      "amount": {
       "type": "string",
@@ -10331,21 +11292,40 @@
       "type": "string",
       "title": "Projected Return"
      },
+     "maturity_value": {
+      "type": "string",
+      "title": "Maturity Value",
+      "description": "Amount plus returns, paid into the wallet at maturity"
+     },
      "status": {
       "type": "string",
-      "title": "Status"
+      "title": "Status",
+      "description": "active | paid_out"
+     },
+     "paid_out_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Paid Out At"
      }
     },
     "type": "object",
     "required": [
      "id",
-     "customer_id",
+     "plan_id",
      "plan_name",
      "amount",
      "return_rate",
      "start_date",
      "maturity_date",
      "projected_return",
+     "maturity_value",
      "status"
     ],
     "title": "InvestmentResponse"
@@ -11504,6 +12484,18 @@
       "type": "string",
       "format": "date-time",
       "title": "Created At"
+     },
+     "read_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Read At"
      }
     },
     "type": "object",
@@ -12123,6 +13115,20 @@
      "status"
     ],
     "title": "PipelineStageSummary"
+   },
+   "PlanImageRequest": {
+    "properties": {
+     "image": {
+      "type": "string",
+      "title": "Image",
+      "description": "Base64 JPEG or PNG, up to 2 MB"
+     }
+    },
+    "type": "object",
+    "required": [
+     "image"
+    ],
+    "title": "PlanImageRequest"
    },
    "ProfilePhotoResponse": {
     "properties": {
@@ -14446,6 +15452,117 @@
     ],
     "title": "UpdatePhotoRequest"
    },
+   "UpdatePlanRequest": {
+    "properties": {
+     "name": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 100,
+        "minLength": 3
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Name"
+     },
+     "description": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Description"
+     },
+     "min_amount": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Min Amount"
+     },
+     "max_amount": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Max Amount"
+     },
+     "return_rate": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 100.0,
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Return Rate"
+     },
+     "tenure_months": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 60.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tenure Months"
+     },
+     "risk": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/RiskLevel"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "is_active": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Is Active"
+     }
+    },
+    "type": "object",
+    "title": "UpdatePlanRequest"
+   },
    "UpdateTicketRequest": {
     "properties": {
      "status": {
@@ -14881,7 +15998,9 @@
        "funding",
        "loan_payout",
        "repayment",
-       "withdrawal"
+       "withdrawal",
+       "investment",
+       "investment_payout"
       ],
       "title": "Kind"
      },

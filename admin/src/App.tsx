@@ -7,6 +7,7 @@ import { LoginPage } from './pages/LoginPage'
 import { ApplicationsPage } from './pages/ApplicationsPage'
 import { ApplicationDetailPage } from './pages/ApplicationDetailPage'
 import { LoanProductsPage } from './pages/LoanProductsPage'
+import { InvestmentsPage } from './pages/InvestmentsPage'
 import { TeamPage } from './pages/TeamPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { CustomerDetailPage } from './pages/CustomerDetailPage'
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="/applications" element={<ApplicationsPage />} />
             <Route path="/applications/:id" element={<ApplicationDetailPage />} />
             <Route path="/loan-products" element={<LoanProductsPage />} />
+            <Route path="/investments" element={<InvestmentsPage />} />
             <Route path="/team" element={<TeamPage />} />
             <Route path="/customers" element={<CustomersPage />} />
             <Route path="/support" element={<SupportPage />} />

@@ -84,6 +84,24 @@ def _older_than(model, customer_id: str, cursor: str | None):
     return or_(model.created_at < stamp, and_(model.created_at == stamp, model.id < row_id))
 
 
+_MONEY_IN = (JournalType.WALLET_FUNDING, JournalType.LOAN_DISBURSEMENT, JournalType.INVESTMENT_PAYOUT)
+_MONEY_OUT = (JournalType.LOAN_REPAYMENT, JournalType.INVESTMENT_PURCHASE)
+_KIND = {
+    JournalType.WALLET_FUNDING: "funding",
+    JournalType.LOAN_DISBURSEMENT: "loan_payout",
+    JournalType.LOAN_REPAYMENT: "repayment",
+    JournalType.INVESTMENT_PURCHASE: "investment",
+    JournalType.INVESTMENT_PAYOUT: "investment_payout",
+}
+_TITLE = {
+    "funding": "Money added",
+    "loan_payout": "Loan paid out",
+    "repayment": "Loan repayment",
+    "investment": "Investment",
+    "investment_payout": "Investment paid out",
+}
+
+
 class WalletTransactionService:
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -98,7 +116,13 @@ class WalletTransactionService:
             .where(
                 LedgerJournal.customer_id == customer_id,
                 LedgerJournal.journal_type.in_(
-                    [JournalType.WALLET_FUNDING, JournalType.LOAN_REPAYMENT, JournalType.LOAN_DISBURSEMENT]
+                    [
+                        JournalType.WALLET_FUNDING,
+                        JournalType.LOAN_REPAYMENT,
+                        JournalType.LOAN_DISBURSEMENT,
+                        JournalType.INVESTMENT_PURCHASE,
+                        JournalType.INVESTMENT_PAYOUT,
+                    ]
                 ),
                 touches_wallet,
             )
@@ -119,9 +143,9 @@ class WalletTransactionService:
         withdrawals: list[WithdrawalRequest] = []
         query = self._journals(customer_id).where(_older_than(LedgerJournal, customer_id, after))
         if direction == "in":
-            query = query.where(LedgerJournal.journal_type.in_([JournalType.WALLET_FUNDING, JournalType.LOAN_DISBURSEMENT]))
+            query = query.where(LedgerJournal.journal_type.in_(_MONEY_IN))
         elif direction == "out":
-            query = query.where(LedgerJournal.journal_type == JournalType.LOAN_REPAYMENT)
+            query = query.where(LedgerJournal.journal_type.in_(_MONEY_OUT))
         journals = list(
             (
                 await self.db.execute(
@@ -212,17 +236,16 @@ class WalletTransactionService:
         )
 
     def _from_journal(self, journal: LedgerJournal, loan: tuple[str, str] | None) -> dict:
-        payout = journal.journal_type == JournalType.LOAN_DISBURSEMENT
-        funding = journal.journal_type == JournalType.WALLET_FUNDING
-        kind = "loan_payout" if payout else "funding" if funding else "repayment"
+        kind = _KIND[journal.journal_type]
+        funding = kind == "funding"
         return {
             "id": f"{_JOURNAL}{journal.id}",
             "kind": kind,
-            "direction": "in" if payout or funding else "out",
+            "direction": "in" if journal.journal_type in _MONEY_IN else "out",
             "amount": self._wallet_amount(journal),
             "status": "completed",
-            "title": {"loan_payout": "Loan paid out", "funding": "Money added", "repayment": "Loan repayment"}[kind],
-            "detail": "Bank transfer" if funding else None,
+            "title": _TITLE[kind],
+            "detail": ("Debit card" if journal.description == "Wallet funded by card" else "Bank transfer") if funding else None,
             "reference": journal.reference,
             "loan_id": loan[0] if loan else None,
             "loan_product": loan[1] if loan else None,

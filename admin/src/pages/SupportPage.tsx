@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import clsx from 'clsx'
-import { CheckCircle2, LifeBuoy, Send, Smartphone } from 'lucide-react'
+import { Check, CheckCheck, CheckCircle2, LifeBuoy, Send, Smartphone } from 'lucide-react'
 import { AdminLayout } from '../components/AdminLayout'
 import { PermissionGate } from '../components/PermissionGate'
 import { useAuth } from '../lib/auth'
 import { hasPermission } from '../lib/permissions'
-import { supportApi, type SupportTicket, type TicketStatus } from '../lib/supportApi'
+import { supportApi, type SupportMessage, type SupportTicket, type TicketStatus } from '../lib/supportApi'
+import { supportSocket, useSupportSocket, type SocketState, type SupportEvent } from '../lib/supportSocket'
 import { ApiError } from '../lib/api'
 
 const CATEGORY: Record<string, string> = {
@@ -74,9 +75,67 @@ function SupportPageContent() {
     load()
   }
 
+  // ── Live updates ──────────────────────────────────────────────────────
+  const [typing, setTyping] = useState<Record<string, number>>({})
+  const reloadSoon = useRef<number | undefined>(undefined)
+
+  const applyEvent = useCallback(
+    (e: SupportEvent) => {
+      const patch = (t: SupportTicket): SupportTicket => {
+        if (t.id !== e.ticket_id) return t
+        if (e.type === 'message') {
+          if (t.messages.some((m) => m.id === e.message.id)) return t
+          return {
+            ...t,
+            status: e.status,
+            messages: [...t.messages, e.message],
+            awaiting_reply: e.message.author === 'customer',
+            updated_at: e.message.created_at,
+          }
+        }
+        if (e.type === 'read') {
+          const mine = e.by === 'customer' ? 'staff' : 'customer'
+          return { ...t, messages: t.messages.map((m) => (m.author === mine && !m.read_at ? { ...m, read_at: e.at } : m)) }
+        }
+        if (e.type === 'ticket') return { ...t, status: e.status }
+        return t
+      }
+      if (e.type === 'typing') {
+        if (e.author === 'customer') setTyping((cur) => ({ ...cur, [e.ticket_id]: Date.now() }))
+        return
+      }
+      if (e.type === 'message' && e.message.author === 'customer') {
+        setTyping((cur) => ({ ...cur, [e.ticket_id]: 0 }))
+      }
+      setSelected((cur) => (cur ? patch(cur) : cur))
+      setTickets((cur) => {
+        if (!cur.some((t) => t.id === e.ticket_id)) {
+          // A request not on this list (new, or another filter): refresh the list shortly.
+          window.clearTimeout(reloadSoon.current)
+          reloadSoon.current = window.setTimeout(load, 400)
+          return cur
+        }
+        const next = cur.map(patch)
+        if (e.type !== 'message') return next
+        const moved = next.find((t) => t.id === e.ticket_id)!
+        return [moved, ...next.filter((t) => t.id !== e.ticket_id)]
+      })
+    },
+    [load],
+  )
+  const live = useSupportSocket(applyEvent)
+
+  // "Typing…" fades after 5 seconds without another keystroke event.
+  const [, tick] = useState(0)
+  useEffect(() => {
+    const id = window.setInterval(() => tick((n) => n + 1), 1000)
+    return () => window.clearInterval(id)
+  }, [])
+  const isTyping = (id: string) => Date.now() - (typing[id] ?? 0) < 5000
+
   return (
     <AdminLayout title="Support" subtitle={`Requests customers sent from the app · ${openCount} waiting`}>
-      <div className="flex gap-2 mb-4">
+      <div className="flex flex-wrap items-center gap-2 mb-4">
         {FILTERS.map((f) => (
           <button
             key={f.label}
@@ -89,6 +148,7 @@ function SupportPageContent() {
             {f.label}
           </button>
         ))}
+        <LiveBadge state={live} />
       </div>
 
       {error && (
@@ -132,7 +192,13 @@ function SupportPageContent() {
                     <p className="text-[11px] text-slate-400 mt-0.5">
                       {t.reference} · {CATEGORY[t.category] ?? t.category} · {new Date(t.updated_at ?? t.created_at).toLocaleString()}
                     </p>
-                    <p className="text-[12px] text-slate-600 mt-1 line-clamp-2">{(t.messages?.at(-1)?.body) ?? t.message}</p>
+                    <p className="text-[12px] text-slate-600 mt-1 line-clamp-2">
+                      {isTyping(t.id) ? (
+                        <span className="text-emerald-600 font-medium">Typing…</span>
+                      ) : (
+                        (t.messages?.at(-1)?.body ?? t.message)
+                      )}
+                    </p>
                   </button>
                 </li>
               ))}
@@ -141,7 +207,16 @@ function SupportPageContent() {
         </div>
 
         {selected ? (
-          <TicketDetail key={selected.id} ticket={selected} canRespond={canRespond} token={token} onUpdated={onUpdated} />
+          <TicketDetail
+            key={selected.id}
+            ticket={selected}
+            canRespond={canRespond}
+            token={token}
+            onUpdated={onUpdated}
+            onMessage={(m, status) => applyEvent({ type: 'message', ticket_id: selected.id, customer_id: selected.customer_id, status, message: m })}
+            customerTyping={isTyping(selected.id)}
+            live={live === 'live'}
+          />
         ) : null}
       </div>
     </AdminLayout>
@@ -153,21 +228,64 @@ function TicketDetail({
   canRespond,
   token,
   onUpdated,
+  onMessage,
+  customerTyping,
+  live,
 }: {
   ticket: SupportTicket
   canRespond: boolean
   token: string | null
   onUpdated: (t: SupportTicket) => void
+  onMessage: (m: SupportMessage, status: TicketStatus) => void
+  customerTyping: boolean
+  live: boolean
 }) {
   const [reply, setReply] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const thread = useRef<HTMLDivElement>(null)
+  const lastTyped = useRef(0)
+
+  const count = ticket.messages?.length ?? 0
+  const unread = ticket.messages?.some((m) => m.author === 'customer' && !m.read_at)
+
+  // Keep the newest message in view.
+  useEffect(() => {
+    thread.current?.scrollTo({ top: thread.current.scrollHeight, behavior: 'smooth' })
+  }, [count, customerTyping])
+
+  // Opening the request (or a new customer message while it's open) marks it read.
+  useEffect(() => {
+    if (!unread || !token) return
+    if (live) supportSocket.read(ticket.id)
+    else supportApi.read(token, ticket.id).catch(() => undefined)
+  }, [unread, live, token, ticket.id])
+
+  const onType = (value: string) => {
+    setReply(value)
+    const now = Date.now()
+    if (live && value.trim() && now - lastTyped.current > 2500) {
+      lastTyped.current = now
+      supportSocket.typing(ticket.id)
+    }
+  }
 
   const send = async (body: { reply?: string; status?: TicketStatus }) => {
     if (!token) return
     setBusy(true)
     setError('')
     try {
+      // A plain reply goes over the live connection when it's up; HTTP otherwise.
+      if (body.reply && !body.status && live) {
+        try {
+          const ack = await supportSocket.send(ticket.id, body.reply)
+          onMessage(ack.message, ack.status)
+          setReply('')
+          return
+        } catch {
+          /* fall through to HTTP */
+        }
+      }
       onUpdated(await supportApi.update(token, ticket.id, body))
       setReply('')
     } catch (err) {
@@ -176,6 +294,8 @@ function TicketDetail({
       setBusy(false)
     }
   }
+
+  const lastStaff = [...(ticket.messages ?? [])].reverse().find((m) => m.author === 'staff')
 
   return (
     <div className="dash-card p-6 space-y-5">
@@ -192,7 +312,7 @@ function TicketDetail({
         <StatusPill status={ticket.status} />
       </div>
 
-      <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-1">
+      <div ref={thread} className="space-y-3 max-h-[28rem] overflow-y-auto pr-1">
         {(ticket.messages?.length
           ? ticket.messages
           : [{ id: 'first', author: 'customer' as const, author_name: 'Customer', body: ticket.message, created_at: ticket.created_at }]
@@ -208,9 +328,28 @@ function TicketDetail({
               {m.author === 'staff' ? m.author_name : ticket.customer_name}
             </p>
             <p className="text-[13px] text-slate-800 whitespace-pre-wrap mt-1">{m.body}</p>
-            <p className="text-[11px] text-slate-400 mt-2">{new Date(m.created_at).toLocaleString()}</p>
+            <p className="text-[11px] text-slate-400 mt-2 flex items-center gap-1">
+              {new Date(m.created_at).toLocaleString()}
+              {m.author === 'staff' ? (
+                m.read_at ? (
+                  <span className="inline-flex items-center gap-0.5 text-sky-600" title={`Seen ${new Date(m.read_at).toLocaleString()}`}>
+                    <CheckCheck className="h-3.5 w-3.5" />
+                    {m.id === lastStaff?.id ? 'Seen' : null}
+                  </span>
+                ) : (
+                  <Check className="h-3.5 w-3.5" aria-label="Sent" />
+                )
+              ) : null}
+            </p>
           </div>
         ))}
+        {customerTyping ? (
+          <div className="inline-flex items-center gap-1 rounded-xl bg-slate-50 ring-1 ring-slate-100 px-4 py-3" aria-label="Customer is typing">
+            <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.3s]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.15s]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce" />
+          </div>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-slate-500">
@@ -233,7 +372,10 @@ function TicketDetail({
         <div className="space-y-3">
           <textarea
             value={reply}
-            onChange={(e) => setReply(e.target.value)}
+            onChange={(e) => onType(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && reply.trim()) send({ reply: reply.trim() })
+            }}
             rows={4}
             placeholder="Write a reply. The customer gets a notification and can reply back in the app."
             className="w-full text-[13px] rounded-xl ring-1 ring-slate-200 p-3 outline-none focus:ring-[#1b2f6b]/30"
@@ -269,6 +411,21 @@ function TicketDetail({
         <p className="text-[12px] text-slate-400">You can read requests but not reply to them.</p>
       )}
     </div>
+  )
+}
+
+function LiveBadge({ state }: { state: SocketState }) {
+  const tone =
+    state === 'live'
+      ? { dot: 'bg-emerald-500', text: 'Live', cls: 'text-emerald-700 bg-emerald-50 ring-emerald-200' }
+      : state === 'connecting'
+        ? { dot: 'bg-amber-400 animate-pulse', text: 'Connecting…', cls: 'text-amber-700 bg-amber-50 ring-amber-200' }
+        : { dot: 'bg-slate-400', text: 'Offline · refresh for new messages', cls: 'text-slate-500 bg-slate-50 ring-slate-200' }
+  return (
+    <span className={clsx('ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ring-1', tone.cls)}>
+      <span className={clsx('h-1.5 w-1.5 rounded-full', tone.dot)} />
+      {tone.text}
+    </span>
   )
 }
 

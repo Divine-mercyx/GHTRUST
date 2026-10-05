@@ -9,6 +9,7 @@ from app.core.celery_app import celery_app
 from app.core.config import get_settings
 from app.modules.payments.worker_service import (
     run_deliver_notifications,
+    run_pay_out_investments,
     run_process_pending_withdrawals,
     run_reconcile_payments,
     run_refresh_loan_statuses,
@@ -81,6 +82,13 @@ def send_loan_reminders(self):
 def deliver_notifications(self):
     """Push queued notifications (payments, decisions, sign-in requests, reminders)."""
     return asyncio.run(run_deliver_notifications())
+
+
+@celery_app.task(name="app.workers.tasks.pay_out_investments", bind=True, **RETRY)
+@single_flight("pay_out_investments", ttl_seconds=900)
+def pay_out_investments(self):
+    """Pay matured investments into wallets (idempotent per investment)."""
+    return asyncio.run(run_pay_out_investments())
 
 
 @celery_app.task(name="app.workers.tasks.refresh_loan_statuses", bind=True, **RETRY)

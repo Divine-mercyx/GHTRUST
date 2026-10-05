@@ -208,6 +208,16 @@ async def run_deliver_notifications() -> dict:
     return {"status": "ok", **counts}
 
 
+async def run_pay_out_investments() -> dict:
+    """Pay matured investments (amount plus returns) into customers' wallets."""
+    from app.modules.investments.service import InvestmentService
+
+    async with worker_session() as db:
+        paid = await InvestmentService(db).pay_out_matured()
+        await db.commit()
+    return {"status": "ok", "paid_out": paid}
+
+
 async def run_send_loan_reminders() -> dict:
     """Queue today's repayment reminders; the delivery job pushes them."""
     from app.modules.notifications.events import send_repayment_reminders

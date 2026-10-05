@@ -19,6 +19,8 @@ const KIND: Record<string, string> = {
   loan_payout: 'Loan paid into wallet',
   repayment: 'Loan repayment from wallet',
   withdrawal: 'Withdrawal to bank',
+  investment: 'Money invested from wallet',
+  investment_payout: 'Investment and returns paid in',
 };
 
 /** Receipt for one wallet transaction. */
@@ -82,7 +84,7 @@ export default function TransactionReceipt() {
         </Text>
         <Text
           variant="display"
-          color={t.direction === 'in' ? colors.success : colors.text}
+          color={t.direction === 'in' ? colors.yield : colors.text}
           style={t.status === 'failed' ? styles.struck : undefined}>
           {sign}
           {naira(t.amount, { kobo: true })}

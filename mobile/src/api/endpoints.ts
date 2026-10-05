@@ -3,6 +3,9 @@ import { Platform } from 'react-native';
 import { api, request } from './client';
 import { GATE_PLATFORM, APP_VERSION } from './config';
 import type {
+  CardTopUp,
+  Investment,
+  InvestmentPlan,
   AppConfig,
   Application,
   ApplicationSummary,
@@ -138,19 +141,21 @@ export const loans = {
   createApplication: (product_code: string) =>
     api.post<Application>('/loans/me/applications', { product_code, channel: 'mobile' }),
   updateStep: (id: string, update: StepUpdate) => api.patch<Application>(`/loans/me/applications/${id}`, update),
-  uploadDocument: async (id: string, documentType: string, file: { uri: string; name: string; type: string }) => {
-    const form = new FormData();
+  uploadDocument: async (
+    id: string,
+    documentType: string,
+    file: { uri: string; name: string; type: string },
+    onProgress?: (fraction: number) => void,
+  ) => {
+    const path = `/loans/me/applications/${id}/documents/${documentType}`;
     if (Platform.OS === 'web') {
       // Browsers need a real Blob; picker URIs there are blob:/data: URLs.
+      const form = new FormData();
       form.append('file', await (await fetch(file.uri)).blob(), file.name);
-    } else {
-      // React Native's FormData takes {uri, name, type} file parts.
-      form.append('file', file as unknown as Blob);
+      return request<Application>('POST', path, { form, timeoutMs: 120_000 });
     }
-    return request<Application>('POST', `/loans/me/applications/${id}/documents/${documentType}`, {
-      form,
-      timeoutMs: 90_000,
-    });
+    // On phones the file is sent natively (see RequestOptions.file).
+    return request<Application>('POST', path, { file: { field: 'file', ...file }, onProgress, timeoutMs: 120_000 });
   },
   submit: (id: string) => api.post<Application>(`/loans/me/applications/${id}/submit`),
   list: () => api.get<Page<Loan>>('/loans/me/loans', { query: { limit: 50 } }),
@@ -165,6 +170,9 @@ export const loans = {
 
 export const wallet = {
   summary: () => api.get<Wallet>('/wallet'),
+  fundCard: (amount: string, idempotencyKey: string) =>
+    api.post<CardTopUp>('/wallet/fund/card', { amount }, { idempotencyKey }),
+  cardTopUp: (reference: string) => api.get<CardTopUp>(`/wallet/fund/card/${encodeURIComponent(reference)}`),
   fund: (amount: string, idempotencyKey: string) =>
     api.post<WalletFundSession>('/wallet/fund', { amount }, { idempotencyKey }),
   transactions: (params: { direction?: TransactionDirection; cursor?: string; limit?: number } = {}) =>
@@ -206,6 +214,18 @@ export const support = {
   create: (ticket: { category: TicketCategory; message: string; related_type?: TicketRelated; related_id?: string }) =>
     api.post<SupportTicket>('/support/tickets', ticket),
   reply: (id: string, body: string) => api.post<SupportTicket>(`/support/tickets/${id}/messages`, { body }),
+  read: (id: string) => api.post<SupportTicket>(`/support/tickets/${id}/read`),
+};
+
+export const investments = {
+  plans: () => api.get<InvestmentPlan[]>('/investments/plans'),
+  mine: () => api.get<Investment[]>('/investments/me'),
+  invest: (planId: string, amount: string, transactionPin: string, idempotencyKey: string) =>
+    api.post<Investment>(
+      '/investments/me',
+      { plan_id: planId, amount, transaction_pin: transactionPin },
+      { idempotencyKey },
+    ),
 };
 
 export const banks = {

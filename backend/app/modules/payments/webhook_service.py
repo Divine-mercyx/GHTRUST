@@ -422,6 +422,12 @@ class WebhookService:
 
         product = data.get("product") or {}
         if product.get("type") != PRODUCT_TYPE_RESERVED_ACCOUNT:
+            from app.modules.payments.card_funding import CardFundingService
+
+            if str(data.get("paymentReference") or "").startswith("GHT-CARD-"):
+                if await self._claim_event("monnify", event_type, data, raw_payload):
+                    await CardFundingService(self.db).handle_webhook(data)
+                return
             logger.info("monnify_inbound_ignored_product", product_type=product.get("type"))
             return
 

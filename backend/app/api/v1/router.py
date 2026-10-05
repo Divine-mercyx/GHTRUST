@@ -20,9 +20,11 @@ from app.modules.payments.admin_router import router as admin_payments_router
 from app.modules.payments.banks import router as banks_router
 from app.modules.legal.router import router as legal_router
 from app.modules.notifications.router import router as notifications_router
+from app.modules.support.realtime import router as support_realtime_router
 from app.modules.support.router import router as support_router
 from app.modules.payments.router import router as wallet_router
 from app.modules.payments.webhook_router import router as paystack_webhook_router
+from app.modules.investments.router import admin_router as admin_investments_router
 from app.modules.investments.router import router as investments_router
 from app.modules.loans.router import router as loans_router
 from app.modules.admin.settings_router import router as admin_settings_router
@@ -46,6 +48,7 @@ api_v1_router.include_router(admin_onboarding_router)
 api_v1_router.include_router(savings_router)
 api_v1_router.include_router(loans_router)
 api_v1_router.include_router(investments_router)
+api_v1_router.include_router(admin_investments_router)
 api_v1_router.include_router(contributions_router)
 api_v1_router.include_router(food_basket_router)
 api_v1_router.include_router(wallet_router)
@@ -53,6 +56,7 @@ api_v1_router.include_router(banks_router)
 api_v1_router.include_router(notifications_router)
 api_v1_router.include_router(legal_router)
 api_v1_router.include_router(support_router)
+api_v1_router.include_router(support_realtime_router)
 api_v1_router.include_router(paystack_webhook_router)
 
 

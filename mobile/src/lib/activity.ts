@@ -21,7 +21,7 @@ export type Activity = {
 
 const TX_STATUS: Record<WalletTransaction['status'], { label: string; tone: Tone }> = {
   completed: { label: 'Completed', tone: 'success' },
-  pending: { label: 'Pending', tone: 'progress' },
+  pending: { label: 'Pending', tone: 'warning' },
   failed: { label: 'Failed', tone: 'danger' },
 };
 
@@ -30,6 +30,8 @@ const TX_ICON: Record<WalletTransaction['kind'], keyof typeof Ionicons.glyphMap>
   loan_payout: 'cash',
   withdrawal: 'arrow-up',
   repayment: 'checkmark-done',
+  investment: 'trending-up',
+  investment_payout: 'sparkles',
 };
 
 /** "******6789" → "•••• 6789", short enough to fit next to a bank name. */

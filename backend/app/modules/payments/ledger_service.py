@@ -348,5 +348,43 @@ class LedgerService:
         return journal
 
 
+    async def invest_from_wallet(
+        self, *, customer_id: str, amount: Decimal, idempotency_key: str, reference: str
+    ) -> LedgerJournal:
+        """Move money from the wallet into an investment (held until maturity)."""
+        return await self.debit_wallet(
+            customer_id=customer_id,
+            amount=amount,
+            journal_type=JournalType.INVESTMENT_PURCHASE,
+            idempotency_key=idempotency_key,
+            reference=reference,
+            credits=[(LedgerAccountCode.INVESTMENT_PRINCIPAL, LedgerDirection.CREDIT, amount)],
+            description="Investment",
+        )
+
+    async def pay_out_investment(
+        self, *, customer_id: str, principal: Decimal, returns: Decimal, idempotency_key: str, reference: str
+    ) -> LedgerJournal:
+        """At maturity: the principal and its returns go back into the wallet. Idempotent."""
+        wallet = await self._lock_wallet(customer_id)
+        total = principal + returns
+        entries = [(LedgerAccountCode.INVESTMENT_PRINCIPAL, LedgerDirection.DEBIT, principal)]
+        if returns > 0:
+            entries.append((LedgerAccountCode.INVESTMENT_RETURN_EXPENSE, LedgerDirection.DEBIT, returns))
+        entries.append((LedgerAccountCode.CUSTOMER_WALLET, LedgerDirection.CREDIT, total))
+        journal, created = await self.post_journal(
+            idempotency_key=idempotency_key,
+            journal_type=JournalType.INVESTMENT_PAYOUT,
+            customer_id=customer_id,
+            reference=reference,
+            description="Investment matured",
+            entries=entries,
+            metadata={"principal": str(principal), "returns": str(returns)},
+        )
+        if created:
+            wallet.available_balance += total
+        return journal
+
+
 def raise_ledger_http(err: LedgerError) -> None:
     raise HTTPException(status_code=err.status_code, detail=err.message) from err

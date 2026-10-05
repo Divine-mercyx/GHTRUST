@@ -28,6 +28,16 @@ export const colors = {
   borderStrong: '#C9D3E6',
   overlay: 'rgba(15, 26, 60, 0.45)',
   white: '#FFFFFF',
+
+  // Accents on the blue/white base. Use sparingly, each for one meaning only:
+  // mint = returns and money growing; amber = waiting on something; slate = quiet fills.
+  yield: '#0F9D6E',
+  yieldBg: '#E4F7EF',
+  yieldBright: '#5EE0B0',
+  pending: '#B7791F',
+  pendingBg: '#FDF3DF',
+  slate: '#64748B',
+  slateFill: '#EEF1F6',
 } as const;
 
 export const space = { xxs: 4, xs: 8, sm: 12, md: 16, lg: 20, xl: 24, xxl: 32, xxxl: 48 } as const;

@@ -2,7 +2,7 @@
 Self-contained API for mobile / UI development: no Docker, Postgres or Redis.
 
     python scripts/dev_server.py                 # http://0.0.0.0:8000
-    python scripts/dev_server.py --wallet        # also switch the wallet feature on
+    python scripts/dev_server.py --wallet        # also switch the wallet and investments on
     python scripts/dev_server.py --reset         # start from an empty database
 
 What you get:
@@ -49,7 +49,7 @@ def _configure_env(wallet: bool) -> None:
             "ZEST_MOCK": "true",
             "SENTRY_DSN": "",
             "UPLOAD_DIR": str(ROOT / "uploads"),
-            "FEATURE_FLAGS": "wallet"
+            "FEATURE_FLAGS": "wallet,investments"
             if wallet
             else os.environ.get("FEATURE_FLAGS", ""),
             "CORS_ORIGINS": ",".join(
@@ -58,6 +58,8 @@ def _configure_env(wallet: bool) -> None:
                     "http://127.0.0.1:8081",
                     "http://localhost:3000",
                     "http://127.0.0.1:3000",
+                    "http://localhost:5173",
+                    "http://127.0.0.1:5173",
                 ]
             ),
         }
@@ -70,6 +72,7 @@ async def _prepare(engine) -> None:
     import app.models.registry  # noqa: F401
     from app.models import Base
     from app.modules.admin.service import ensure_super_admin_role, seed_super_admin
+    from app.modules.investments.seed import seed_sample_plans
     from app.modules.loans.service import seed_loan_products
     from app.modules.loans.workflow_seed import seed_default_workflows
 
@@ -80,6 +83,7 @@ async def _prepare(engine) -> None:
     )() as session:
         await seed_loan_products(session)
         await seed_default_workflows(session)
+        await seed_sample_plans(session)
         await ensure_super_admin_role(session)
         try:
             await seed_super_admin(
@@ -119,7 +123,7 @@ def main() -> None:
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument(
-        "--wallet", action="store_true", help="enable the wallet feature flag"
+        "--wallet", action="store_true", help="enable the wallet and investments feature flags"
     )
     parser.add_argument(
         "--reset", action="store_true", help="delete the dev database first"
