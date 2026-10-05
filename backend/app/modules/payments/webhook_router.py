@@ -24,6 +24,7 @@ from typing import Any
 import structlog
 from fastapi import APIRouter, HTTPException, Request, status
 
+from app.core.rate_limit import get_client_ip
 from app.core.config import get_settings
 from app.core.deps import DbSession
 from app.integrations.monnify.client import MonnifyClient
@@ -113,7 +114,8 @@ async def monnify_webhook(request: Request, db: DbSession) -> WebhookAckResponse
     raw_body = await request.body()
 
     if settings.monnify_webhook_ip_check and settings.app_env not in _LENIENT_ENVS:
-        client_ip = request.client.host if request.client else None
+        # The real sender behind Railway's proxy (TRUSTED_PROXY_COUNT), not the proxy itself.
+        client_ip = get_client_ip(request)
         if client_ip != MONNIFY_WEBHOOK_IP:
             logger.warning("monnify_webhook_untrusted_ip", client_ip=client_ip)
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Untrusted origin")
