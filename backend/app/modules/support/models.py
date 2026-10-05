@@ -63,3 +63,5 @@ class SupportMessage(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     author: Mapped[str] = mapped_column(String(10))  # MessageAuthor value
     staff_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), ForeignKey("staff.id"), nullable=True)
     body: Mapped[str] = mapped_column(Text)
+    # When the other side read it (customer read a staff reply, or staff read the customer).
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

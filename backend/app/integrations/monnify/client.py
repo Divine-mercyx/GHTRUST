@@ -20,6 +20,7 @@ from app.integrations.monnify.constants import (
 from app.integrations.payments.schemas import (
     MOCK_BANKS,
     Bank,
+    CardCheckout,
     DisbursementResult,
     PaymentRailError,
     ReservedAccountResult,
@@ -404,6 +405,63 @@ class MonnifyClient:
             status=str(body.get("paymentStatus") or body.get("status") or ""),
             payment_method=str(body.get("paymentMethod") or "") or None,
             account_reference=str(product.get("reference") or "") or None,
+            raw=body,
+        )
+
+    async def init_card_checkout(
+        self,
+        *,
+        amount: Decimal,
+        payment_reference: str,
+        customer_name: str,
+        customer_email: str,
+        redirect_url: str,
+    ) -> CardCheckout:
+        """Start a card payment on Monnify's hosted checkout page."""
+        if self._use_mock:
+            return CardCheckout(payment_reference=payment_reference, mock=True)
+
+        body = await self._request(
+            "POST",
+            "/api/v1/merchant/transactions/init-transaction",
+            json={
+                "amount": float(amount),
+                "customerName": customer_name,
+                "customerEmail": customer_email,
+                "paymentReference": payment_reference,
+                "paymentDescription": "GH Trust wallet top-up",
+                "currencyCode": "NGN",
+                "contractCode": self.contract_code,
+                "redirectUrl": redirect_url,
+                "paymentMethods": ["CARD"],
+            },
+        )
+        return CardCheckout(
+            payment_reference=payment_reference,
+            transaction_reference=str(body.get("transactionReference") or "") or None,
+            checkout_url=str(body.get("checkoutUrl") or "") or None,
+        )
+
+    async def query_by_payment_reference(self, payment_reference: str) -> TransactionVerification:
+        """Status of a checkout payment, by the reference we chose when starting it."""
+        if self._use_mock:
+            return TransactionVerification(
+                transaction_reference=payment_reference,
+                payment_reference=payment_reference,
+                amount=Decimal("0"),
+                status="PAID",
+                raw={"mock": True},
+            )
+        body = await self._request(
+            "GET", "/api/v2/merchant/transactions/query", params={"paymentReference": payment_reference}
+        )
+        return TransactionVerification(
+            transaction_reference=str(body.get("transactionReference") or payment_reference),
+            payment_reference=payment_reference,
+            amount=self._decimal_amount(body.get("amountPaid") or body.get("amount")),
+            currency=str(body.get("currency") or "NGN"),
+            status=str(body.get("paymentStatus") or ""),
+            payment_method=str(body.get("paymentMethod") or "") or None,
             raw=body,
         )
 

@@ -1658,6 +1658,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/investments/plans/{plan_id}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A plan's picture */
+        get: operations["plan_image_api_v1_investments_plans__plan_id__image_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/investments/calculator": {
         parameters: {
             query?: never;
@@ -1685,8 +1702,84 @@ export interface paths {
         /** List My Investments */
         get: operations["list_my_investments_api_v1_investments_me_get"];
         put?: never;
-        /** Create My Investment */
+        /**
+         * Create My Investment
+         * @description Invest wallet money in a plan. Needs the transaction PIN; send an Idempotency-Key.
+         */
         post: operations["create_my_investment_api_v1_investments_me_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/investments/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin List Plans */
+        get: operations["admin_list_plans_api_v1_admin_investments_plans_get"];
+        put?: never;
+        /** Admin Create Plan */
+        post: operations["admin_create_plan_api_v1_admin_investments_plans_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/investments/plans/{plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Admin Update Plan
+         * @description Changes apply to new investments; existing ones keep the rate they were bought at.
+         */
+        patch: operations["admin_update_plan_api_v1_admin_investments_plans__plan_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/investments/plans/{plan_id}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Admin Set Plan Image */
+        put: operations["admin_set_plan_image_api_v1_admin_investments_plans__plan_id__image_put"];
+        post?: never;
+        /** Admin Remove Plan Image */
+        delete: operations["admin_remove_plan_image_api_v1_admin_investments_plans__plan_id__image_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/investments/holdings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Holdings */
+        get: operations["admin_holdings_api_v1_admin_investments_holdings_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1793,6 +1886,44 @@ export interface paths {
          * @description Zest: generate a temporary virtual account for bank transfer (expires ~5 minutes).
          */
         post: operations["create_wallet_funding_session_api_v1_wallet_fund_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/fund/card": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Card Funding
+         * @description Top up the wallet with a debit card. Open `checkout_url` in a browser; when the customer
+         *     finishes, the page goes to `return_url`. Then poll GET /wallet/fund/card/{reference}.
+         */
+        post: operations["start_card_funding_api_v1_wallet_fund_card_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/fund/card/{reference}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Card Funding Status */
+        get: operations["card_funding_status_api_v1_wallet_fund_card__reference__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2148,6 +2279,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/support/tickets/{ticket_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** I've read the replies */
+        post: operations["read_ticket_api_v1_support_tickets__ticket_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/support/tickets": {
         parameters: {
             query?: never;
@@ -2180,6 +2328,23 @@ export interface paths {
         head?: never;
         /** Reply or update */
         patch: operations["update_ticket_api_v1_admin_support_tickets__ticket_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/support/tickets/{ticket_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark the customer read */
+        post: operations["admin_read_ticket_api_v1_admin_support_tickets__ticket_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/webhooks/monnify": {
@@ -2424,6 +2589,96 @@ export interface components {
             /** Product Mix */
             product_mix: components["schemas"]["DashboardProductMix"][];
             demographics: components["schemas"]["DashboardDemographics"];
+        };
+        /** AdminHoldingResponse */
+        AdminHoldingResponse: {
+            /** Id */
+            id: string;
+            /** Reference */
+            reference: string | null;
+            /** Customer Id */
+            customer_id: string;
+            /** Customer Name */
+            customer_name: string;
+            /** Plan Name */
+            plan_name: string;
+            /** Amount */
+            amount: string;
+            /** Return Rate */
+            return_rate: string;
+            /** Projected Return */
+            projected_return: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * Maturity Date
+             * Format: date
+             */
+            maturity_date: string;
+            /** Status */
+            status: string;
+            /** Paid Out At */
+            paid_out_at: string | null;
+        };
+        /** AdminHoldingsPage */
+        AdminHoldingsPage: {
+            /** Items */
+            items: components["schemas"]["AdminHoldingResponse"][];
+            /** Total */
+            total: number;
+            /** Active Amount */
+            active_amount: string;
+            /** Due In 30 Days */
+            due_in_30_days: string;
+        };
+        /** AdminPlanResponse */
+        AdminPlanResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Min Amount */
+            min_amount: string;
+            /** Max Amount */
+            max_amount?: string | null;
+            /**
+             * Return Rate
+             * @description % a year, simple interest
+             */
+            return_rate: string;
+            /** Tenure Months */
+            tenure_months: number;
+            risk: components["schemas"]["RiskLevel"];
+            /** Description */
+            description?: string | null;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+            /**
+             * Image Url
+             * @description Path of the plan's picture (changes when it changes)
+             */
+            image_url?: string | null;
+            /**
+             * Active Investors
+             * @default 0
+             */
+            active_investors: number;
+            /**
+             * Active Amount
+             * @default 0
+             */
+            active_amount: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** AdminSettingsResponse */
         AdminSettingsResponse: {
@@ -2816,6 +3071,27 @@ export interface components {
              */
             bvn: string;
         };
+        /** CardFundRequest */
+        CardFundRequest: {
+            /** Amount */
+            amount: number | string;
+        };
+        /** CardFundResponse */
+        CardFundResponse: {
+            /** Reference */
+            reference: string;
+            /** Amount */
+            amount: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "completed" | "failed" | "reversed";
+            /** Checkout Url */
+            checkout_url?: string | null;
+            /** Return Url */
+            return_url?: string | null;
+        };
         /** ChangeLoginPinRequest */
         ChangeLoginPinRequest: {
             /**
@@ -2983,6 +3259,28 @@ export interface components {
             required_document_types: string[];
             /** Workflow Steps */
             workflow_steps: string[];
+        };
+        /** CreatePlanRequest */
+        CreatePlanRequest: {
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /** Min Amount */
+            min_amount: number | string;
+            /** Max Amount */
+            max_amount?: number | string | null;
+            /** Return Rate */
+            return_rate: number | string;
+            /** Tenure Months */
+            tenure_months: number;
+            /** @default low */
+            risk: components["schemas"]["RiskLevel"];
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
         };
         /** CreateTicketRequest */
         CreateTicketRequest: {
@@ -3578,6 +3876,8 @@ export interface components {
             plan_id: string;
             /** Amount */
             amount: number | string;
+            /** Transaction Pin */
+            transaction_pin: string;
         };
         /** InvestmentCalculatorRequest */
         InvestmentCalculatorRequest: {
@@ -3610,7 +3910,12 @@ export interface components {
             name: string;
             /** Min Amount */
             min_amount: string;
-            /** Return Rate */
+            /** Max Amount */
+            max_amount?: string | null;
+            /**
+             * Return Rate
+             * @description % a year, simple interest
+             */
             return_rate: string;
             /** Tenure Months */
             tenure_months: number;
@@ -3622,15 +3927,24 @@ export interface components {
              * @default true
              */
             is_active: boolean;
+            /**
+             * Image Url
+             * @description Path of the plan's picture (changes when it changes)
+             */
+            image_url?: string | null;
         };
         /** InvestmentResponse */
         InvestmentResponse: {
             /** Id */
             id: string;
-            /** Customer Id */
-            customer_id: string;
+            /** Reference */
+            reference?: string | null;
+            /** Plan Id */
+            plan_id: string;
             /** Plan Name */
             plan_name: string;
+            /** Image Url */
+            image_url?: string | null;
             /** Amount */
             amount: string;
             /** Return Rate */
@@ -3647,8 +3961,18 @@ export interface components {
             maturity_date: string;
             /** Projected Return */
             projected_return: string;
-            /** Status */
+            /**
+             * Maturity Value
+             * @description Amount plus returns, paid into the wallet at maturity
+             */
+            maturity_value: string;
+            /**
+             * Status
+             * @description active | paid_out
+             */
             status: string;
+            /** Paid Out At */
+            paid_out_at?: string | null;
         };
         /** LegalPendingResponse */
         LegalPendingResponse: {
@@ -4025,6 +4349,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Read At */
+            read_at?: string | null;
         };
         /** NotificationPage */
         NotificationPage: {
@@ -4246,6 +4572,14 @@ export interface components {
             approver_role_name?: string | null;
             /** Status */
             status: string;
+        };
+        /** PlanImageRequest */
+        PlanImageRequest: {
+            /**
+             * Image
+             * @description Base64 JPEG or PNG, up to 2 MB
+             */
+            image: string;
         };
         /** ProfilePhotoResponse */
         ProfilePhotoResponse: {
@@ -5021,6 +5355,24 @@ export interface components {
              */
             image: string;
         };
+        /** UpdatePlanRequest */
+        UpdatePlanRequest: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Min Amount */
+            min_amount?: number | string | null;
+            /** Max Amount */
+            max_amount?: number | string | null;
+            /** Return Rate */
+            return_rate?: number | string | null;
+            /** Tenure Months */
+            tenure_months?: number | null;
+            risk?: components["schemas"]["RiskLevel"] | null;
+            /** Is Active */
+            is_active?: boolean | null;
+        };
         /** UpdateTicketRequest */
         UpdateTicketRequest: {
             /** Status */
@@ -5149,7 +5501,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "funding" | "loan_payout" | "repayment" | "withdrawal";
+            kind: "funding" | "loan_payout" | "repayment" | "withdrawal" | "investment" | "investment_payout";
             /**
              * Direction
              * @enum {string}
@@ -8445,6 +8797,37 @@ export interface operations {
             };
         };
     };
+    plan_image_api_v1_investments_plans__plan_id__image_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     investment_calculator_api_v1_investments_calculator_post: {
         parameters: {
             query?: never;
@@ -8518,6 +8901,193 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InvestmentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_list_plans_api_v1_admin_investments_plans_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPlanResponse"][];
+                };
+            };
+        };
+    };
+    admin_create_plan_api_v1_admin_investments_plans_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPlanResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_update_plan_api_v1_admin_investments_plans__plan_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPlanResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_set_plan_image_api_v1_admin_investments_plans__plan_id__image_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanImageRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPlanResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_remove_plan_image_api_v1_admin_investments_plans__plan_id__image_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPlanResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_holdings_api_v1_admin_investments_holdings_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminHoldingsPage"];
                 };
             };
             /** @description Validation Error */
@@ -8708,6 +9278,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WalletFundSessionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_card_funding_api_v1_wallet_fund_card_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CardFundRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardFundResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    card_funding_status_api_v1_wallet_fund_card__reference__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reference: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardFundResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9331,6 +9965,37 @@ export interface operations {
             };
         };
     };
+    read_ticket_api_v1_support_tickets__ticket_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     admin_tickets_api_v1_admin_support_tickets_get: {
         parameters: {
             query?: {
@@ -9378,6 +10043,37 @@ export interface operations {
                 "application/json": components["schemas"]["UpdateTicketRequest"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTicketResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_read_ticket_api_v1_admin_support_tickets__ticket_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

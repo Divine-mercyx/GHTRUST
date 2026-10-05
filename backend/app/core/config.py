@@ -17,7 +17,7 @@ _INSECURE_SECRETS = frozenset(
 
 SUPPORTED_SMS_PROVIDERS = frozenset({"termii"})
 # Optional modules that are fully built and may be switched on in production.
-LIVE_FEATURES = ("wallet",)
+LIVE_FEATURES = ("wallet", "investments")
 
 
 def _is_local_url(url: str) -> bool:
@@ -294,8 +294,8 @@ class Settings(BaseSettings):
                 errors.append(f"DEMO_PHONES is set, so DEMO_OTP must be {self.otp_length} digits")
             elif weak_code(code):
                 errors.append("DEMO_OTP is guessable (all one digit or a run like 123456): pick another")
-        # Savings, investments, contributions and food basket have no account flows yet
-        # (their endpoints return 501), so the app must not be told they're on.
+        # Savings, contributions and food basket have no account flows yet (their
+        # endpoints return 501), so the app must not be told they're on.
         unbuilt = sorted(
             f.strip() for f in self.feature_flags.split(",") if f.strip() and f.strip() not in LIVE_FEATURES
         )

@@ -87,7 +87,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
 export function Banner({ tone = 'error', message }: { tone?: 'error' | 'info' | 'warning'; message: string }) {
   const palette = {
     error: { bg: colors.errorBg, fg: colors.error, icon: 'alert-circle' as const },
-    warning: { bg: colors.warningBg, fg: colors.warning, icon: 'warning' as const },
+    warning: { bg: colors.pendingBg, fg: colors.pending, icon: 'warning' as const },
     info: { bg: colors.mint, fg: colors.cyanDeep, icon: 'information-circle' as const },
   }[tone];
   return (

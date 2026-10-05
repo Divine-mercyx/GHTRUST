@@ -30,6 +30,8 @@ class JournalType(str, enum.Enum):
     WALLET_WITHDRAWAL_RELEASE = "wallet_withdrawal_release"
     LOAN_DISBURSEMENT = "loan_disbursement"
     LOAN_REPAYMENT = "loan_repayment"
+    INVESTMENT_PURCHASE = "investment_purchase"
+    INVESTMENT_PAYOUT = "investment_payout"
 
 
 class LedgerDirection(str, enum.Enum):
@@ -45,6 +47,10 @@ class LedgerAccountCode(str, enum.Enum):
     # Interest is recognised when collected (cash basis) until GH Trust's
     # accounting policy says otherwise.
     INTEREST_INCOME = "interest_income"
+    # Money customers have invested: owed back to them at maturity.
+    INVESTMENT_PRINCIPAL = "investment_principal"
+    # Returns paid on investments.
+    INVESTMENT_RETURN_EXPENSE = "investment_return_expense"
 
 
 class PaymentDirection(str, enum.Enum):

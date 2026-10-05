@@ -3,6 +3,9 @@ Help & support: FAQs for the app, customer requests, and the staff side that ans
 them. Each request is a conversation: the customer and the team can both keep writing.
 A staff reply notifies the customer (in the app and by push); a customer reply reopens
 a resolved request and moves it to the top of the staff list.
+
+Both sides normally chat over the WebSocket in realtime.py (instant messages, typing,
+read receipts). These HTTP routes stay as the fallback and publish the same live events.
 """
 
 import secrets
@@ -11,7 +14,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 
 from app.core.deps import CurrentCustomer, DbSession, RedisClient
 from app.core.errors import AppError
@@ -62,6 +65,7 @@ class MessageResponse(BaseModel):
     author_name: str  # the customer sees "GH Trust support"; staff see who replied
     body: str
     created_at: datetime
+    read_at: datetime | None = None  # when the other side read it
 
 
 class ReplyRequest(BaseModel):
@@ -141,7 +145,9 @@ def _ticket(
         updated_at=t.updated_at,
         awaiting_reply=bool(messages) and messages[-1].author == MessageAuthor.CUSTOMER.value,
         messages=[
-            MessageResponse(id=m.id, author=m.author, author_name=name(m), body=m.body, created_at=m.created_at)
+            MessageResponse(
+                id=m.id, author=m.author, author_name=name(m), body=m.body, created_at=m.created_at, read_at=m.read_at
+            )
             for m in messages
         ],
     )
@@ -160,6 +166,105 @@ async def _one(db, t: SupportTicket) -> TicketResponse:
 
 def _reference() -> str:
     return "GHT-" + "".join(secrets.choice(_ALPHABET) for _ in range(6))
+
+
+# ── Shared by the HTTP routes and the WebSocket ──────────────────────────────
+
+
+def message_views(m: SupportMessage, staff_name: str | None = None) -> dict:
+    """The message as the customer sees it and as staff see it (staff names stay internal)."""
+    base = MessageResponse(
+        id=m.id, author=m.author, author_name="You", body=m.body, created_at=m.created_at, read_at=m.read_at
+    )
+    if m.author == MessageAuthor.CUSTOMER.value:
+        return {
+            "customer": base.model_dump(mode="json"),
+            "staff": base.model_copy(update={"author_name": "Customer"}).model_dump(mode="json"),
+        }
+    return {
+        "customer": base.model_copy(update={"author_name": SUPPORT_NAME}).model_dump(mode="json"),
+        "staff": base.model_copy(update={"author_name": staff_name or SUPPORT_NAME}).model_dump(mode="json"),
+    }
+
+
+async def add_customer_message(db, ticket: SupportTicket, body: str, redis) -> SupportMessage:
+    body = body.strip()
+    if not body:
+        raise AppError(status.HTTP_422_UNPROCESSABLE_ENTITY, "VALIDATION_ERROR", "Write a message first.")
+    if len(body) > 2000:
+        raise AppError(status.HTTP_422_UNPROCESSABLE_ENTITY, "VALIDATION_ERROR", "Keep it under 2,000 characters.")
+    await RateLimiter(redis).hit(f"support-message:day:{ticket.customer_id}", MESSAGES_PER_DAY, 86400)
+    message = _message(ticket.id, author=MessageAuthor.CUSTOMER.value, body=body)
+    db.add(message)
+    # Back on the team's list: reopened if it was resolved, and newest activity first.
+    if ticket.status == TicketStatus.RESOLVED.value:
+        ticket.status = TicketStatus.OPEN.value
+        ticket.resolved_at = None
+    ticket.updated_at = datetime.now(timezone.utc)
+    await db.flush()
+    return message
+
+
+async def add_staff_reply(db, ticket: SupportTicket, staff: Staff, body: str) -> SupportMessage:
+    body = body.strip()
+    if not 1 <= len(body) <= 2000:
+        raise AppError(status.HTTP_422_UNPROCESSABLE_ENTITY, "VALIDATION_ERROR", "Write 1 to 2,000 characters.")
+    now = datetime.now(timezone.utc)
+    ticket.reply = body
+    ticket.replied_at = now
+    ticket.replied_by = staff.id
+    message = _message(ticket.id, author=MessageAuthor.STAFF.value, staff_id=staff.id, body=body)
+    db.add(message)
+    if ticket.status == TicketStatus.OPEN.value:
+        ticket.status = TicketStatus.IN_PROGRESS.value
+    ticket.updated_at = now
+    await NotificationService(db).notify(
+        ticket.customer_id,
+        "support_reply",
+        "We've replied to your request",
+        f"About {ticket.reference}: {body[:120]}{'…' if len(body) > 120 else ''}",
+        route=f"/support/{ticket.id}",
+    )
+    await db.flush()
+    return message
+
+
+async def mark_read(db, ticket: SupportTicket, reader: Literal["customer", "staff"]) -> datetime | None:
+    """The reader has seen the other side's messages. Returns when, or None if nothing was unread."""
+    other = MessageAuthor.STAFF.value if reader == "customer" else MessageAuthor.CUSTOMER.value
+    now = datetime.now(timezone.utc)
+    result = await db.execute(
+        update(SupportMessage)
+        .where(SupportMessage.ticket_id == ticket.id, SupportMessage.author == other, SupportMessage.read_at.is_(None))
+        .values(read_at=now)
+        .execution_options(synchronize_session=False)
+    )
+    await db.flush()
+    return now if result.rowcount else None
+
+
+async def publish_message(redis, ticket: SupportTicket, message: SupportMessage, staff_name: str | None = None):
+    from app.modules.support.realtime import hub
+
+    await hub.publish(
+        redis,
+        {
+            "type": "message",
+            "ticket_id": ticket.id,
+            "customer_id": ticket.customer_id,
+            "status": ticket.status,
+            "views": message_views(message, staff_name),
+        },
+    )
+
+
+async def publish_read(redis, ticket: SupportTicket, reader: str, at: datetime) -> None:
+    from app.modules.support.realtime import hub
+
+    await hub.publish(
+        redis,
+        {"type": "read", "ticket_id": ticket.id, "customer_id": ticket.customer_id, "by": reader, "at": at.isoformat()},
+    )
 
 
 # ── Customer ─────────────────────────────────────────────────────────────────
@@ -198,9 +303,11 @@ async def create_ticket(
     )
     db.add(ticket)
     await db.flush()
-    db.add(_message(ticket.id, author=MessageAuthor.CUSTOMER.value, body=ticket.message))
+    first = _message(ticket.id, author=MessageAuthor.CUSTOMER.value, body=ticket.message)
+    db.add(first)
     await db.flush()
     await db.refresh(ticket)
+    await publish_message(redis, ticket, first)
     return await _one(db, ticket)
 
 
@@ -241,18 +348,22 @@ async def reply_to_ticket(
     )
     if ticket is None:
         raise AppError(status.HTTP_404_NOT_FOUND, "NOT_FOUND", "Request not found")
-    body = payload.body.strip()
-    if not body:
-        raise AppError(status.HTTP_422_UNPROCESSABLE_ENTITY, "VALIDATION_ERROR", "Write a message first.")
-    await RateLimiter(redis).hit(f"support-message:day:{customer.id}", MESSAGES_PER_DAY, 86400)
-    db.add(_message(ticket.id, author=MessageAuthor.CUSTOMER.value, body=body))
-    # Back on the team's list: reopened if it was resolved, and newest activity first.
-    if ticket.status == TicketStatus.RESOLVED.value:
-        ticket.status = TicketStatus.OPEN.value
-        ticket.resolved_at = None
-    ticket.updated_at = datetime.now(timezone.utc)
-    await db.flush()
+    message = await add_customer_message(db, ticket, payload.body, redis)
     await db.refresh(ticket)
+    await publish_message(redis, ticket, message)
+    return await _one(db, ticket)
+
+
+@router.post("/support/tickets/{ticket_id}/read", response_model=TicketResponse, summary="I've read the replies")
+async def read_ticket(ticket_id: str, customer: CurrentCustomer, db: DbSession, redis: RedisClient) -> TicketResponse:
+    ticket = await db.scalar(
+        select(SupportTicket).where(SupportTicket.id == ticket_id, SupportTicket.customer_id == customer.id)
+    )
+    if ticket is None:
+        raise AppError(status.HTTP_404_NOT_FOUND, "NOT_FOUND", "Request not found")
+    at = await mark_read(db, ticket, "customer")
+    if at:
+        await publish_read(redis, ticket, "customer", at)
     return await _one(db, ticket)
 
 
@@ -320,6 +431,7 @@ async def update_ticket(
     ticket_id: str,
     payload: UpdateTicketRequest,
     db: DbSession,
+    redis: RedisClient,
     staff: Staff = Depends(require_permission(SUPPORT_RESPOND)),
 ) -> AdminTicketResponse:
     ticket = await db.get(SupportTicket, ticket_id)
@@ -327,24 +439,36 @@ async def update_ticket(
         raise AppError(status.HTTP_404_NOT_FOUND, "NOT_FOUND", "Request not found")
     if payload.status is None and payload.reply is None:
         raise AppError(status.HTTP_422_UNPROCESSABLE_ENTITY, "VALIDATION_ERROR", "Nothing to update.")
-    now = datetime.now(timezone.utc)
+    message = None
     if payload.reply:
-        ticket.reply = payload.reply.strip()
-        ticket.replied_at = now
-        ticket.replied_by = staff.id
-        db.add(_message(ticket.id, author=MessageAuthor.STAFF.value, staff_id=staff.id, body=ticket.reply))
-        if ticket.status == TicketStatus.OPEN.value and payload.status is None:
-            ticket.status = TicketStatus.IN_PROGRESS.value
-        await NotificationService(db).notify(
-            ticket.customer_id,
-            "support_reply",
-            "We've replied to your request",
-            f"About {ticket.reference}: {ticket.reply[:120]}{'…' if len(ticket.reply) > 120 else ''}",
-            route=f"/support/{ticket.id}",
-        )
+        message = await add_staff_reply(db, ticket, staff, payload.reply)
     if payload.status:
         ticket.status = payload.status
-        ticket.resolved_at = now if payload.status == TicketStatus.RESOLVED.value else None
+        ticket.resolved_at = datetime.now(timezone.utc) if payload.status == TicketStatus.RESOLVED.value else None
     await db.flush()
     await db.refresh(ticket)
+    if message is not None:
+        await publish_message(redis, ticket, message, staff.full_name)
+    else:
+        from app.modules.support.realtime import hub
+
+        await hub.publish(
+            redis,
+            {"type": "ticket", "ticket_id": ticket.id, "customer_id": ticket.customer_id, "status": ticket.status},
+        )
+    return await _admin_ticket(db, ticket)
+
+
+@router.post(
+    "/admin/support/tickets/{ticket_id}/read", response_model=AdminTicketResponse, summary="Mark the customer read"
+)
+async def admin_read_ticket(
+    ticket_id: str, db: DbSession, redis: RedisClient, _: Staff = Depends(require_permission(SUPPORT_READ))
+) -> AdminTicketResponse:
+    ticket = await db.get(SupportTicket, ticket_id)
+    if ticket is None:
+        raise AppError(status.HTTP_404_NOT_FOUND, "NOT_FOUND", "Request not found")
+    at = await mark_read(db, ticket, "staff")
+    if at:
+        await publish_read(redis, ticket, "staff", at)
     return await _admin_ticket(db, ticket)

@@ -8,6 +8,7 @@
  *   reuses it, so a payment can never be applied twice.
  */
 import * as Crypto from 'expo-crypto';
+import { File, UploadType } from 'expo-file-system';
 import { Platform } from 'react-native';
 
 import { tokenStore } from '@/auth/storage';
@@ -22,6 +23,13 @@ type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 export type RequestOptions = {
   body?: unknown;
   form?: FormData;
+  /**
+   * A file on the phone to send as multipart/form-data. Sent natively: Expo's fetch (the
+   * app's global fetch) can't send React Native's {uri, name, type} FormData parts.
+   */
+  file?: UploadPart;
+  /** Upload progress, 0 to 1 (native uploads only). */
+  onProgress?: (fraction: number) => void;
   query?: Record<string, string | number | boolean | undefined | null>;
   /** Reuse one key for every retry of the same user action (payments, withdrawals). */
   idempotencyKey?: string;
@@ -29,6 +37,8 @@ export type RequestOptions = {
   timeoutMs?: number;
   signal?: AbortSignal;
 };
+
+export type UploadPart = { field: string; uri: string; name: string; type: string };
 
 type Listeners = {
   /** The session can't be recovered: forget it and show sign-in. */
@@ -51,6 +61,11 @@ export function setAccessToken(token: string | null) {
 
 export function hasAccessToken() {
   return accessToken !== null;
+}
+
+/** For the support chat socket, which sends the token in its first frame. */
+export function getAccessToken() {
+  return accessToken;
 }
 
 export const newIdempotencyKey = () => Crypto.randomUUID();
@@ -116,6 +131,7 @@ async function send(method: Method, path: string, opts: RequestOptions, idempote
   const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? 20_000);
   opts.signal?.addEventListener('abort', () => controller.abort());
   try {
+    if (opts.file) return await uploadNative(method, buildUrl(path, opts.query), headers, opts, controller.signal);
     return await fetch(buildUrl(path, opts.query), { method, headers, body, signal: controller.signal });
   } catch (err) {
     if (opts.signal?.aborted) throw err;
@@ -131,6 +147,29 @@ async function send(method: Method, path: string, opts: RequestOptions, idempote
   } finally {
     clearTimeout(timeout);
   }
+}
+
+/** Multipart upload of a file on the phone, returned as a normal Response for the shared error handling. */
+async function uploadNative(
+  method: Method,
+  url: string,
+  headers: Record<string, string>,
+  opts: RequestOptions,
+  signal: AbortSignal,
+): Promise<Response> {
+  const part = opts.file!;
+  const result = await new File(part.uri).upload(url, {
+    httpMethod: method === 'PUT' || method === 'PATCH' ? method : 'POST',
+    uploadType: UploadType.MULTIPART,
+    fieldName: part.field,
+    mimeType: part.type,
+    headers,
+    signal,
+    onProgress: opts.onProgress
+      ? ({ bytesSent, totalBytes }) => totalBytes > 0 && opts.onProgress!(Math.min(1, bytesSent / totalBytes))
+      : undefined,
+  });
+  return new Response(result.body || null, { status: result.status, headers: result.headers });
 }
 
 /** Exchange the stored refresh token for a new pair. Only one runs at a time. */

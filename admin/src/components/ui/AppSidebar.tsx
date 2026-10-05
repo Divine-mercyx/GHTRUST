@@ -9,6 +9,7 @@ import {
   Pin,
   Search,
   Settings,
+  TrendingUp,
   UserCog,
   Users,
 } from 'lucide-react'
@@ -32,6 +33,7 @@ function buildSections(
   canViewCustomers: boolean,
   canViewSettings: boolean,
   canViewSupport: boolean,
+  canViewInvestments: boolean,
 ): { title: string; items: NavItem[] }[] {
   const systemItems: NavItem[] = []
   if (canManageTeam) {
@@ -62,6 +64,9 @@ function buildSections(
         { to: '/loan-products', label: 'Loan products', icon: <HandCoins size={16} /> },
       ],
     },
+    ...(canViewInvestments
+      ? [{ title: 'Investing', items: [{ to: '/investments', label: 'Investments', icon: <TrendingUp size={16} /> }] }]
+      : []),
     { title: 'System', items: systemItems },
   ]
 }
@@ -103,6 +108,7 @@ export function AppSidebar({ collapsed, pinned, floating, onTogglePin, onNavigat
     hasPermission(staff, 'loan:read'),
     hasPermission(staff, 'loan:read'),
     hasPermission(staff, 'support:read'),
+    hasPermission(staff, 'investment:read'),
   )
 
   // Geometry: 72px rail. Nav rows start 12px in with 16px left padding, so every icon is

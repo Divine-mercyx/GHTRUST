@@ -36,6 +36,7 @@ export type Bank = S['BankResponse'];
 export type ResolvedAccount = S['ResolveAccountResponse'];
 
 export type Wallet = S['WalletSummaryResponse'];
+export type CardTopUp = S['CardFundResponse'];
 export type WalletFundSession = S['WalletFundSessionResponse'];
 export type PayoutAccount = S['PayoutAccountSummary'];
 export type PayoutAccountSaved = S['PayoutAccountSavedResponse'];
@@ -58,4 +59,7 @@ export type TicketRelated = NonNullable<S['CreateTicketRequest']['related_type']
 export type SupportMessage = S['MessageResponse'];
 export type ProfilePhoto = S['ProfilePhotoResponse'];
 export type DeletionCheck = S['DeletionCheckResponse'];
+
+export type InvestmentPlan = S['InvestmentPlanResponse'];
+export type Investment = S['InvestmentResponse'];
 export type AccountDeleted = S['AccountDeletedResponse'];

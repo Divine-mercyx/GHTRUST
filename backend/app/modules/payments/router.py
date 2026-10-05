@@ -1,12 +1,18 @@
 from typing import Literal
 
-from fastapi import APIRouter, Header, Query, status
+import re
+
+from fastapi import APIRouter, Header, Query, Request, status
+from fastapi.responses import HTMLResponse
 
 from app.core.deps import CurrentCustomer, DbSession
 from app.core.errors import AppError
 from app.modules.auth.security_service import SecurityService
 from app.modules.payments.ledger_service import LedgerError, raise_ledger_http
+from app.modules.payments.card_funding import CardFundingService
 from app.modules.payments.schemas import (
+    CardFundRequest,
+    CardFundResponse,
     PayoutAccountSavedResponse,
     UpdatePayoutAccountRequest,
     WalletFundRequest,
@@ -38,6 +44,46 @@ async def create_wallet_funding_session(
     """Zest: generate a temporary virtual account for bank transfer (expires ~5 minutes)."""
     session = await WalletService(db).create_funding_session(customer, payload.amount)
     return WalletFundSessionResponse(**session)
+
+
+def _card_return_url(request: Request) -> str:
+    url = str(request.url_for("card_funding_return"))
+    host = request.url.hostname or ""
+    if url.startswith("http://") and host not in {"localhost", "127.0.0.1", "testserver"} and not host.startswith("192.168."):
+        url = "https://" + url[len("http://"):]  # behind the host's TLS proxy
+    return url
+
+
+@router.post("/fund/card", response_model=CardFundResponse, status_code=status.HTTP_201_CREATED)
+async def start_card_funding(
+    payload: CardFundRequest, request: Request, customer: CurrentCustomer, db: DbSession
+) -> CardFundResponse:
+    """
+    Top up the wallet with a debit card. Open `checkout_url` in a browser; when the customer
+    finishes, the page goes to `return_url`. Then poll GET /wallet/fund/card/{reference}.
+    """
+    return_url = _card_return_url(request)
+    started = await CardFundingService(db).start(customer, payload.amount, return_url)
+    return CardFundResponse(**started, return_url=return_url)
+
+
+@router.get("/fund/card/return", name="card_funding_return", include_in_schema=False)
+async def card_funding_return(paymentReference: str = "") -> HTMLResponse:  # noqa: N803 (Monnify's name)
+    """Where Monnify's checkout lands. Hands the customer back to the app."""
+    ref = re.sub(r"[^A-Za-z0-9_-]", "", paymentReference)[:64]
+    app_link = f"ghtrust://fund?reference={ref}"
+    return HTMLResponse(
+        "<!doctype html><meta name=viewport content='width=device-width,initial-scale=1'>"
+        "<title>GH Trust</title><body style='font-family:sans-serif;text-align:center;padding:48px 24px'>"
+        "<h2>Payment received</h2><p>You can go back to the GH Trust app.</p>"
+        f"<p><a href='{app_link}'>Open GH Trust</a></p>"
+        f"<script>location.href={app_link!r}</script></body>"
+    )
+
+
+@router.get("/fund/card/{reference}", response_model=CardFundResponse)
+async def card_funding_status(reference: str, customer: CurrentCustomer, db: DbSession) -> CardFundResponse:
+    return CardFundResponse(**await CardFundingService(db).status(customer, reference))
 
 
 @router.get("/transactions", response_model=WalletTransactionPage)

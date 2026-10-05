@@ -14,6 +14,8 @@ export const PERMISSION_LABELS: Record<string, string> = {
   'loan:verify_documents': 'Verify documents',
   'loan:disburse': 'Disburse loans',
   'loan:configure_workflow': 'Configure workflows',
+  'investment:read': 'View investments',
+  'investment:manage': 'Manage investment plans',
 }
 
 export function permissionLabel(key: string): string {

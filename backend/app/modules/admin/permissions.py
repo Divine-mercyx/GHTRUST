@@ -22,6 +22,9 @@ PAYMENT_READ = "payment:read"
 SUPPORT_READ = "support:read"
 SUPPORT_RESPOND = "support:respond"
 
+INVESTMENT_READ = "investment:read"
+INVESTMENT_MANAGE = "investment:manage"
+
 ALL_PERMISSIONS: tuple[str, ...] = (
     STAFF_READ,
     STAFF_CREATE,
@@ -40,6 +43,8 @@ ALL_PERMISSIONS: tuple[str, ...] = (
     PAYMENT_READ,
     SUPPORT_READ,
     SUPPORT_RESPOND,
+    INVESTMENT_READ,
+    INVESTMENT_MANAGE,
 )
 
 SUPER_ADMIN_ROLE_NAME = "Super Admin"

@@ -33,6 +33,20 @@ class WalletFundRequest(BaseModel):
     amount: Decimal = Field(gt=0, decimal_places=2)
 
 
+class CardFundRequest(BaseModel):
+    amount: Decimal = Field(ge=100, le=1_000_000, decimal_places=2)
+
+
+class CardFundResponse(BaseModel):
+    reference: str
+    amount: Decimal
+    status: Literal["pending", "completed", "failed", "reversed"]
+    # Open this page for the customer to pay. None when the top-up was credited at once (demo server).
+    checkout_url: str | None = None
+    # The checkout page sends the customer here when they finish; close the browser on it.
+    return_url: str | None = None
+
+
 class WalletFundSessionResponse(BaseModel):
     transaction_ref: str
     account_number: str
@@ -97,7 +111,7 @@ class WalletTransactionResponse(BaseModel):
     """One movement of money in or out of the wallet, as the customer sees it."""
 
     id: str
-    kind: Literal["funding", "loan_payout", "repayment", "withdrawal"]
+    kind: Literal["funding", "loan_payout", "repayment", "withdrawal", "investment", "investment_payout"]
     direction: Literal["in", "out"]
     amount: float
     status: Literal["completed", "pending", "failed"]

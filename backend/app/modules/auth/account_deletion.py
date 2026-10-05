@@ -163,12 +163,25 @@ class AccountDeletionService:
                 )
             )
 
+        investing = await self.db.scalar(
+            select(func.count())
+            .select_from(CustomerInvestment)
+            .where(CustomerInvestment.customer_id == cid, CustomerInvestment.status == "active")
+        )
+        if investing:
+            found.append(
+                Blocker(
+                    "INVESTMENT_ACTIVE",
+                    "You have an investment that hasn't matured yet. It's paid into your wallet at maturity; "
+                    "withdraw it, then delete your account.",
+                )
+            )
+
         # Modules without customer flows yet; if they ever hold money, a person must close them.
         other = await self.db.scalar(
             select(
                 or_(
                     exists().where(SavingsAccount.customer_id == cid),
-                    exists().where(CustomerInvestment.customer_id == cid),
                     exists().where(GroupMember.customer_id == cid),
                     exists().where(GroupContribution.member_id == cid),
                     exists().where(ContributionGroup.leader_id == cid),
@@ -180,7 +193,7 @@ class AccountDeletionService:
             found.append(
                 Blocker(
                     "OTHER_PRODUCTS",
-                    "You have savings, investments or group plans with us. Contact support to close them "
+                    "You have savings or group plans with us. Contact support to close them "
                     "before deleting your account.",
                 )
             )

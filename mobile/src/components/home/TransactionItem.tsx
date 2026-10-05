@@ -48,7 +48,7 @@ export const TransactionItem = memo(function TransactionItem({ item, last, withT
       </View>
       <View style={styles.side}>
         {amount ? (
-          <Text variant="bodyStrong" color={item.direction === 'in' ? colors.success : colors.text} numberOfLines={1}>
+          <Text variant="bodyStrong" color={item.direction === 'in' ? colors.yield : colors.text} numberOfLines={1}>
             {amount}
           </Text>
         ) : null}

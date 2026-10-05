@@ -27,14 +27,17 @@ export function DocumentChecklist({ application, editable }: Props) {
   const queryClient = useQueryClient();
   const [target, setTarget] = useState<ChecklistItem | null>(null);
   const [pickError, setPickError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
 
   const upload = useMutation({
     mutationFn: async ({ item, source }: { item: ChecklistItem; source: Source }) => {
       const file = await pickFile(source);
       if (!file) return null;
-      return loans.uploadDocument(application.id, item.document_type, file);
+      setProgress(0);
+      return loans.uploadDocument(application.id, item.document_type, file, setProgress);
     },
     onMutate: () => setPickError(null),
+    onSettled: () => setProgress(null),
     onSuccess: (updated) => {
       if (updated) queryClient.setQueryData(keys.application(application.id), updated);
     },
@@ -95,7 +98,16 @@ export function DocumentChecklist({ application, editable }: Props) {
                   </Text>
                 ) : null}
               </View>
-              {busy ? <ActivityIndicator color={colors.navy} /> : status ? <Badge label={status.label} tone={status.tone} /> : null}
+              {busy ? (
+                <View style={styles.busy}>
+                  {progress !== null && progress > 0 ? (
+                    <Text variant="small" color={colors.navy} accessibilityLabel={`Uploading, ${Math.round(progress * 100)} percent`}>
+                      {Math.round(progress * 100)}%
+                    </Text>
+                  ) : null}
+                  <ActivityIndicator color={colors.navy} />
+                </View>
+              ) : status ? <Badge label={status.label} tone={status.tone} /> : null}
             </Pressable>
           );
         })}
@@ -119,6 +131,7 @@ export const documentsComplete = (app: Application) =>
   app.document_checklist.every((d) => d.uploaded && d.status !== 'rejected');
 
 const styles = StyleSheet.create({
+  busy: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: space.sm, minHeight: HIT + 12 },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   icon: {

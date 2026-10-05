@@ -63,6 +63,15 @@ class TransactionVerification(BaseModel):
     raw: dict[str, Any] = Field(default_factory=dict)
 
 
+class CardCheckout(BaseModel):
+    """A hosted card checkout page (Monnify init-transaction)."""
+
+    payment_reference: str
+    transaction_reference: str | None = None
+    checkout_url: str | None = None  # None in mock mode: the payment is treated as paid at once
+    mock: bool = False
+
+
 class WalletBalanceResult(BaseModel):
     available_balance: Decimal
     ledger_balance: Decimal | None = None

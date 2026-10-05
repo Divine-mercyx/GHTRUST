@@ -25,12 +25,14 @@ async def ensure_loan_catalogue(session_factory=None) -> None:
     """
     from app.core.database import AsyncSessionLocal
     from app.modules.loans.service import seed_loan_products
+    from app.modules.investments.seed import seed_sample_plans
     from app.modules.loans.workflow_seed import seed_default_workflows
 
     async with (session_factory or AsyncSessionLocal)() as session:
         try:
             await seed_loan_products(session)
             await seed_default_workflows(session)
+            await seed_sample_plans(session)  # only while there are no plans at all
             await session.commit()
         except IntegrityError:
             await session.rollback()  # another worker process seeded them first

@@ -8,6 +8,7 @@ export interface SupportMessage {
   author_name: string
   body: string
   created_at: string
+  read_at?: string | null
 }
 
 export interface SupportTicket {
@@ -44,4 +45,6 @@ export const supportApi = {
     apiFetch<TicketPage>(`/api/v1/admin/support/tickets${status ? `?status=${status}` : ''}`, {}, token),
   update: (token: string, id: string, body: { status?: TicketStatus; reply?: string }) =>
     apiFetch<SupportTicket>(`/api/v1/admin/support/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, token),
+  read: (token: string, id: string) =>
+    apiFetch<SupportTicket>(`/api/v1/admin/support/tickets/${id}/read`, { method: 'POST' }, token),
 }
