@@ -197,3 +197,20 @@ class TestUploadValidation:
         doc = res.json()["documents"][0] if res.json().get("documents") else None
         if doc:
             assert doc["file_name"] == "evil.html"  # path components stripped
+
+
+class TestMonnifyWebhookOrigin:
+    """With the IP check on, the sender is read through Railway's proxy, not the proxy itself."""
+
+    async def test_real_sender_ip_is_checked(self, api_client, monkeypatch):
+        from tests.conftest import refresh_settings
+
+        monkeypatch.setenv("APP_ENV", "staging")
+        monkeypatch.setenv("MONNIFY_WEBHOOK_IP_CHECK", "true")
+        monkeypatch.setenv("TRUSTED_PROXY_COUNT", "1")
+        refresh_settings()
+        url = "/api/v1/webhooks/monnify"
+        stranger = await api_client.post(url, content=b"{}", headers={"X-Forwarded-For": "6.6.6.6"})
+        assert stranger.status_code == 403
+        monnify = await api_client.post(url, content=b"{}", headers={"X-Forwarded-For": "35.242.133.146"})
+        assert monnify.status_code != 403  # past the origin check; the signature check decides next

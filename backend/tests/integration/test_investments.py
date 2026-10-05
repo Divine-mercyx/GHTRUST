@@ -237,3 +237,76 @@ class TestCardTopUp:
         assert res.status_code == 200
         assert "ghtrust://fund?reference=GHT-CARD-1script" in res.text
         assert "<script>location" in res.text
+
+
+class TestCardTopUpReconciliation:
+    """A missed webhook, and the customer closed the app: the reconciliation job settles it."""
+
+    async def _pending(self, api_client, db_session, reference: str):
+        from app.models.base import TransactionStatus
+        from app.modules.payments.models import PaymentChannel, PaymentDirection, PaymentProvider
+
+        customer_id, _ = await _customer(api_client)
+        tx = PaymentTransaction(
+            provider=PaymentProvider.MONNIFY,
+            provider_reference=reference,
+            direction=PaymentDirection.INBOUND,
+            channel=PaymentChannel.CARD,
+            amount=Decimal("7000"),
+            status=TransactionStatus.PENDING,
+            customer_id=customer_id,
+        )
+        db_session.add(tx)
+        await db_session.commit()
+        return customer_id, tx
+
+    async def _reconcile(self, db_session, monkeypatch, status: str):
+        from app.integrations.monnify.client import MonnifyClient
+        from app.integrations.payments.schemas import TransactionVerification
+        from app.modules.payments import worker_service
+
+        async def query(self, payment_reference):
+            return TransactionVerification(
+                transaction_reference="MNFY|9", payment_reference=payment_reference, amount=Decimal("7000"), status=status
+            )
+
+        async def wrong_lookup(self, reference):
+            raise AssertionError("card top-ups must be looked up by payment reference")
+
+        class _SessionCtx:
+            async def __aenter__(self):
+                return db_session
+
+            async def __aexit__(self, *exc):
+                return False
+
+        monkeypatch.setattr(MonnifyClient, "query_by_payment_reference", query)
+        monkeypatch.setattr(MonnifyClient, "verify_transaction", wrong_lookup)
+        monkeypatch.setattr(worker_service, "worker_session", lambda: _SessionCtx())
+        return await worker_service.run_reconcile_payments()
+
+    async def test_paid_top_up_is_credited_once(self, api_client, db_session, monkeypatch):
+        from app.models.base import TransactionStatus
+
+        customer_id, tx = await self._pending(api_client, db_session, "GHT-CARD-RECON1")
+        assert (await self._reconcile(db_session, monkeypatch, "PAID"))["matched"] == 1
+        assert (await self._reconcile(db_session, monkeypatch, "PAID"))["matched"] == 0
+        await db_session.refresh(tx)
+        assert tx.status == TransactionStatus.COMPLETED
+        assert await _balance(db_session, customer_id) == Decimal("7000")
+
+    async def test_unfinished_checkout_stays_pending_then_expires(self, api_client, db_session, monkeypatch):
+        from datetime import timedelta
+
+        from app.models.base import TransactionStatus
+
+        _, fresh = await self._pending(api_client, db_session, "GHT-CARD-RECON2")
+        await self._reconcile(db_session, monkeypatch, "PENDING")
+        await db_session.refresh(fresh)
+        assert fresh.status == TransactionStatus.PENDING
+
+        fresh.created_at = fresh.created_at - timedelta(days=3)
+        await db_session.commit()
+        await self._reconcile(db_session, monkeypatch, "PENDING")
+        await db_session.refresh(fresh)
+        assert fresh.status == TransactionStatus.FAILED and fresh.failure_reason == "Card payment not completed"

@@ -10,6 +10,7 @@ Without Monnify keys (mock mode, never allowed in production) the top-up is cred
 so the flow can be tried end to end on a demo server.
 """
 
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from secrets import token_hex
 from typing import Any
@@ -33,6 +34,13 @@ logger = structlog.get_logger()
 # Monnify payment statuses that will never turn into money.
 FAILED_STATUSES = {"FAILED", "CANCELLED", "EXPIRED", "REVERSED"}
 PAID_STATUSES = {"PAID", "OVERPAID"}
+CARD_PREFIX = "GHT-CARD-"
+# A checkout nobody finished: after this the top-up is closed as expired.
+ABANDONED_AFTER = timedelta(hours=48)
+
+
+def is_card_topup(tx: PaymentTransaction) -> bool:
+    return tx.channel == PaymentChannel.CARD and (tx.provider_reference or "").startswith(CARD_PREFIX)
 
 
 def _view(tx: PaymentTransaction, checkout_url: str | None = None) -> dict[str, Any]:
@@ -50,12 +58,14 @@ class CardFundingService:
         self.monnify = MonnifyClient()
 
     async def start(self, customer: Customer, amount: Decimal, redirect_url: str) -> dict[str, Any]:
-        if settings.active_payment_provider != "monnify":
+        # Cards always go through Monnify: available when it is the main rail, or when live
+        # Monnify keys are set alongside another rail (e.g. Stanbic for accounts and transfers).
+        if settings.active_payment_provider != "monnify" and not settings.monnify_enabled:
             raise AppError(
                 status.HTTP_409_CONFLICT, "CARD_UNAVAILABLE", "Card top-ups aren't available. Use bank transfer."
             )
         wallet = await LedgerService(self.db).get_or_create_wallet(customer.id)
-        reference = f"GHT-CARD-{token_hex(8).upper()}"
+        reference = f"{CARD_PREFIX}{token_hex(8).upper()}"
         tx = PaymentTransaction(
             provider=PaymentProvider.MONNIFY,
             provider_reference=reference,
@@ -96,23 +106,37 @@ class CardFundingService:
             raise AppError(status.HTTP_404_NOT_FOUND, "NOT_FOUND", "Top-up not found")
         if tx.status == TransactionStatus.PENDING:
             try:
-                found = await self.monnify.query_by_payment_reference(reference)
+                await self.settle(tx)
             except PaymentRailError as exc:
                 logger.info("card_topup_query_failed", reference=reference, error=exc.message)
-            else:
-                state = found.status.upper()
-                if state in PAID_STATUSES:
-                    await self.complete(tx, found.amount, source="query", transaction_reference=found.transaction_reference)
-                elif state in FAILED_STATUSES:
-                    tx.status = TransactionStatus.FAILED
-                    tx.failure_reason = f"Card payment {state.lower()}"
-                    await self.db.flush()
         return _view(tx)
+
+    async def settle(self, tx: PaymentTransaction, *, now: datetime | None = None) -> bool:
+        """
+        Ask Monnify about a pending top-up and close it if it's decided. Used by the status
+        route and by the reconciliation job (missed webhook, customer closed the app).
+        Returns True if it's no longer pending. Raises PaymentRailError if Monnify can't say.
+        """
+        if tx.status != TransactionStatus.PENDING:
+            return True
+        found = await self.monnify.query_by_payment_reference(tx.provider_reference)
+        state = found.status.upper()
+        if state in PAID_STATUSES:
+            await self.complete(tx, found.amount, source="query", transaction_reference=found.transaction_reference)
+            return True
+        created = tx.created_at if tx.created_at.tzinfo else tx.created_at.replace(tzinfo=timezone.utc)
+        abandoned = (now or datetime.now(timezone.utc)) - created > ABANDONED_AFTER
+        if state in FAILED_STATUSES or abandoned:
+            tx.status = TransactionStatus.FAILED
+            tx.failure_reason = f"Card payment {state.lower()}" if state in FAILED_STATUSES else "Card payment not completed"
+            await self.db.flush()
+            return True
+        return False
 
     async def handle_webhook(self, data: dict[str, Any]) -> bool:
         """Credit a card top-up from Monnify's webhook. False if the payment isn't one of ours."""
         reference = str(data.get("paymentReference") or "")
-        if not reference.startswith("GHT-CARD-"):
+        if not reference.startswith(CARD_PREFIX):
             return False
         tx = await self._find(reference)
         if tx is None:

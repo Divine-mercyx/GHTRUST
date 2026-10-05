@@ -8,10 +8,12 @@ setting below is missing or unsafe (`production_config_errors` in
 
 ## What's ready and what's blocking
 
-**Ready (verified before this runbook was written):** backend lint and all tests, migrations up to
-`022` apply, match the models and roll back cleanly; the Docker image builds and refuses an
-insecure production config; the admin portal (Next.js) and the legacy Vite admin build;
-the mobile app typechecks, lints, passes its tests, and its API types match the backend.
+**Ready:** backend lint and all tests; migrations up to `025` (investments, card top-ups,
+chat read receipts); the Docker image builds and refuses an insecure production config,
+including payment or Dojah settings still pointing at a sandbox; the admin portal (`admin/`,
+Vite, on Vercel) builds; the mobile app typechecks, lints, passes its tests, and its API
+types match the backend. Investments, debit card top-ups and live support chat are built
+(`docs/investments.md`, `docs/support-chat.md`).
 
 **Blocking go-live (needs you):**
 
@@ -19,7 +21,9 @@ the mobile app typechecks, lints, passes its tests, and its API types match the 
 |---|---|---|
 | 1 | Termii API key + approved sender ID | No SMS codes = nobody can sign up or sign in |
 | 2 | Dojah App ID + secret key, funded wallet | BVN lookup and face check |
-| 3 | Live payment provider keys + webhook secret (Monnify, Paystack, Stanbic or Zest) | Wallet funding, payouts, disbursement |
+| 3 | Live payment provider keys + webhook secret (Monnify now; Stanbic later, see below) | Wallet funding, payouts, disbursement, card top-ups |
+| 3a | Firebase project (`google-services.json` + FCM key) | Push notifications on Android |
+| 3b | Real investment plans (or approval of the samples) | The three sample plans are placeholders |
 | 4 | A domain (e.g. `ghtrust.ng`) for the API and the admin portal | Staff sign-in cookie needs both on the same domain (below) |
 | 5 | Brand icon and splash image | Store listings |
 | 6 | Google Play Console and Apple Developer accounts | Publishing the app |
@@ -35,7 +39,7 @@ project per environment (staging and production, never shared):
 | Redis | Railway Redis | – | Sessions, OTPs, rate limits, task queue |
 | **api** | `backend/Dockerfile` | the image's default | Healthcheck path `/api/v1/health/ready`. **Pre-deploy command: `alembic upgrade head && python scripts/seed.py`.** **Attach a volume at `/app/uploads`** |
 | **worker** | same image | `celery -A app.core.celery_app.celery_app worker --loglevel=info` | Processes withdrawals, reconciliation, notifications |
-| **beat** | same image | `celery -A app.core.celery_app.celery_app beat --loglevel=info` | Schedules the periodic jobs. Run **exactly one** |
+| **beat** | same image | `celery -A app.core.celery_app.celery_app beat --loglevel=info` | Schedules the periodic jobs (withdrawals, reconciliation incl. unconfirmed card top-ups, investment payouts hourly, push). Run **exactly one** |
 
 Two things that fail silently if skipped:
 
@@ -67,8 +71,10 @@ Generate secrets with `python -c "import secrets; print(secrets.token_urlsafe(48
 | `DOJAH_MOCK_PHONE` | **empty** |
 | `OTP_TEST_ECHO` | `false` (codes are never echoed in production anyway, but keep it off) |
 | `PAYMENT_PROVIDER` | `monnify`, `paystack`, `stanbic` or `zest` |
-| provider keys | e.g. Monnify: `MONNIFY_API_KEY`, `MONNIFY_SECRET_KEY`, `MONNIFY_CONTRACT_CODE`, `MONNIFY_MOCK=false`. The webhook secret is the provider's secret key, except Stanbic (`STANBIC_WEBHOOK_SECRET`) |
-| `FEATURE_FLAGS` | `wallet` to launch with the wallet: loans are then **paid into the wallet** and customers withdraw to any bank. Empty for loans only (paid straight to the bank account in the application). Savings, investments, contributions and food basket are refused until they are built |
+| provider keys | Monnify: `MONNIFY_BASE_URL=https://api.monnify.com`, `MONNIFY_API_KEY` (`MK_PROD_…`), `MONNIFY_SECRET_KEY`, `MONNIFY_CONTRACT_CODE`, `MONNIFY_WALLET_ACCOUNT_NUMBER`, `MONNIFY_MOCK=false`. The API refuses to start in production with the sandbox URL or `MK_TEST_` keys. The webhook secret is the provider's secret key, except Stanbic (`STANBIC_WEBHOOK_SECRET`). Card top-ups always use Monnify, even if Stanbic handles accounts and transfers |
+| `MONNIFY_WEBHOOK_IP_CHECK` | `true` (recommended): only Monnify's published IP may call the webhook. Signatures are checked either way |
+| `TRUSTED_PROXY_COUNT` | leave unset on Railway (it is detected and set to 1, so rate limits apply per customer, not to everyone behind Railway's proxy). Set explicitly elsewhere |
+| `FEATURE_FLAGS` | `wallet,investments` to launch with the wallet and investing: loans are then **paid into the wallet**, customers withdraw to any bank and can invest wallet money. `wallet` alone hides investing (the plans are still shown, marked "opens soon"). Empty for loans only. Savings, contributions and food basket are refused until they are built |
 | `PUSH_MOCK` / `EXPO_PUSH_ACCESS_TOKEN` | `false` to send push notifications (worker + beat must run; the job sends every minute). The token is optional (Expo push security). Android also needs Firebase credentials in EAS, see section 6 |
 | `SEED_SUPER_ADMIN_NAME`, `…_EMAIL`, `…_PHONE` | the first staff admin (see step 4) |
 | `DEMO_PHONES`, `DEMO_OTP`, `DEMO_LOGIN_PIN`, `DEMO_TRANSACTION_PIN` | optional: the app-review account (below) |
@@ -119,14 +125,19 @@ wallet is never credited.
 3. Deploy **worker** and **beat**.
 4. Check `https://<api domain>/api/v1/health/ready` returns `{"status":"ready"}`.
 
-## 5. Admin portal (Next.js, repo root)
+## 5. Admin portal (`admin/`, Vite, on Vercel)
 
-- Set `NEXT_PUBLIC_API_URL=https://<api domain>` (`.env.production` defaults to the Railway API), build with `npm run build`, serve with `npm run start`.
-- **Host it on the same domain as the API**, e.g. `admin.ghtrust.ng` and `api.ghtrust.ng`.
-  The staff session cookie is `Secure` and `SameSite=Strict`, so browsers only send it
-  between sites on the same registrable domain. With `*.vercel.app` and `*.up.railway.app`
-  staff would be signed out on every refresh.
-- Add the portal's origin to `CORS_ORIGINS` on the API.
+The live portal is the Vite app in `admin/`, deployed by Vercel from the BigJohn-dev/GHTRUST
+fork (Root Directory `admin`). After merging to `main`, **Sync fork** on GitHub so Vercel
+rebuilds. (The Next.js app at the repo root is an older portal and isn't deployed.)
+
+- `admin/vercel.json` proxies `/api/*` to the Railway API, so the browser only ever talks to
+  the portal's own domain and the `Secure; SameSite=Strict` staff cookie works on
+  `*.vercel.app`. If the API moves to its own domain, change the proxy destination there.
+- **Live support chat is a WebSocket**, which Vercel can't proxy: the portal connects straight
+  to `wss://ghtrust-production.up.railway.app`. If the API moves, set `VITE_WS_URL=wss://<api domain>`
+  in Vercel's environment variables and redeploy.
+- Add the portal's origin (e.g. `https://ghtrust.vercel.app`) to `CORS_ORIGINS` on the API.
 
 ## 6. Mobile app
 
@@ -156,8 +167,16 @@ project's credentials once:
 2. Firebase → Project settings → Service accounts → generate a private key (JSON).
 3. `npx eas-cli@latest credentials` → Android → production → Google Service Account → FCM V1
    → upload that key.
-4. Put `google-services.json` in `mobile/` and set `"googleServicesFile": "./google-services.json"`
-   under `android` in `app.json`, then build again.
+4. Give EAS the `google-services.json` as a file variable (it's git-ignored; `app.config.js`
+   picks it up, no code change needed), for each profile you build:
+
+   ```bash
+   cd mobile
+   npx eas-cli@latest env:create --environment production --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --visibility secret
+   npx eas-cli@latest env:create --environment preview --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --visibility secret
+   ```
+
+5. Set `PUSH_MOCK=false` on the API and build the app again.
 
 In-app notifications work without any of this; push needs it.
 
@@ -174,8 +193,13 @@ On a real phone with the production build:
 2. Admin portal: staff sign-in works and survives a page refresh (proves the cookie setup).
 3. Apply for a small loan, upload documents; approve and disburse from the portal.
 4. Fund the wallet with ₦100 by bank transfer: balance updates within minutes (proves webhooks).
+   Then ₦100 by debit card: credited when the card page closes.
 5. Repay part of the loan; withdraw ₦100 to a bank account: it arrives (proves the worker).
 6. Admin **Onboarding** page shows the sign-up and face check.
+7. Support: send a message from the app; it appears in the portal at once, with "Seen" after
+   staff open it (proves the chat socket). Reply from the portal; it appears in the app.
+8. Invest the minimum in a plan (with real plans set up first): wallet debited, Invest tab
+   shows it, admin Investments page lists it.
 
 ## 8. Rollback
 
@@ -186,6 +210,14 @@ On a real phone with the production build:
 | App JavaScript | `npx eas-cli@latest update:republish` the previous update to the `production` channel |
 | App native crash | Ship a fixed build; meanwhile raise `APP_MIN_VERSION_*` only once the fix is in the store |
 | Emergency stop | `MAINTENANCE_MODE=true` on the API shows the maintenance screen in the app |
+
+## Switching to Stanbic later
+
+The Stanbic adapter is built against our requirements document, not Stanbic's real API (it is
+only published after partner onboarding). Before `PAYMENT_PROVIDER=stanbic`: get sandbox
+access and their API spec, reconcile the paths and field names marked `TODO(stanbic-spec)` in
+`backend/app/integrations/stanbic/constants.py`, and run the full smoke test on their sandbox.
+Customers' wallet account numbers change on the switch; card top-ups stay on Monnify.
 
 ## 9. After launch
 
