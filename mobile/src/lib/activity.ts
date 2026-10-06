@@ -44,6 +44,8 @@ export const transactionIcon = (k: WalletTransaction['kind']) => TX_ICON[k] ?? '
 export function transactionDetail(tx: WalletTransaction): string {
   if (tx.kind === 'repayment') return tx.loan_product ? productName(tx.loan_product) : 'From your wallet';
   if (tx.kind === 'loan_payout') return tx.loan_product ? productName(tx.loan_product) : 'Loan';
+  if (tx.kind === 'investment') return 'From your wallet';
+  if (tx.kind === 'investment_payout') return 'Amount plus returns';
   return tx.detail ? shortAccount(tx.detail) : '';
 }
 
