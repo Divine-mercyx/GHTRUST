@@ -23,7 +23,8 @@ LIVE_PROD = dict(
     dojah_secret_key="secret",
     payment_provider="monnify",
     monnify_mock=False,
-    monnify_api_key="k",
+    monnify_api_key="MK_PROD_k",
+    monnify_base_url="https://api.monnify.com",
     monnify_secret_key="s",
     monnify_contract_code="c",
     cors_origins="https://admin.ghtrust.com",
@@ -64,6 +65,9 @@ class TestProductionGuard:
             ({"dojah_mock": True}, "Dojah"),
             ({"monnify_mock": True}, "mock mode"),
             ({"monnify_secret_key": ""}, "Webhook signing secret"),
+            ({"monnify_base_url": "https://sandbox.monnify.com"}, "sandbox"),
+            ({"monnify_api_key": "MK_TEST_abc"}, "sandbox"),
+            ({"dojah_base_url": "https://sandbox.dojah.io"}, "DOJAH_BASE_URL"),
             ({"cors_origins": "http://localhost:5173"}, "localhost"),
             ({"feature_flags": "wallet,savings"}, "savings"),
             ({"feature_flags": "food_basket"}, "FEATURE_FLAGS"),
@@ -94,6 +98,14 @@ class TestClientIp:
         monkeypatch.setenv("TRUSTED_PROXY_COUNT", "0")
         refresh_settings()
         assert get_client_ip(_request("10.0.0.5", "1.2.3.4")) == "10.0.0.5"
+
+    def test_railway_trusts_its_edge_proxy_by_default(self, monkeypatch):
+        monkeypatch.delenv("TRUSTED_PROXY_COUNT", raising=False)
+        monkeypatch.setenv("RAILWAY_ENVIRONMENT_NAME", "production")
+        assert Settings(_env_file=None).trusted_proxy_count == 1
+        assert Settings(_env_file=None, trusted_proxy_count=0).trusted_proxy_count == 0
+        monkeypatch.delenv("RAILWAY_ENVIRONMENT_NAME")
+        assert Settings(_env_file=None).trusted_proxy_count == 0
 
     def test_uses_address_appended_by_trusted_proxy(self, monkeypatch):
         monkeypatch.setenv("TRUSTED_PROXY_COUNT", "1")

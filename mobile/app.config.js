@@ -2,7 +2,20 @@
 //
 // A release build without EXPO_PUBLIC_API_URL would fall back to the development
 // origin (http://<metro host>:8000) and reach nothing, so the build fails instead.
+const fs = require('fs');
+const path = require('path');
+
 const RELEASE_PROFILES = ['preview', 'production'];
+
+// Android push needs Firebase's google-services.json. On EAS it comes from a "file"
+// environment variable (GOOGLE_SERVICES_JSON holds the path on the build machine);
+// locally, from mobile/google-services.json. Without it the app builds and in-app
+// notifications work, but Android phones get no push notifications.
+function googleServicesFile() {
+  if (process.env.GOOGLE_SERVICES_JSON) return process.env.GOOGLE_SERVICES_JSON;
+  const local = path.join(__dirname, 'google-services.json');
+  return fs.existsSync(local) ? './google-services.json' : undefined;
+}
 
 module.exports = ({ config }) => {
   const profile = process.env.EAS_BUILD_PROFILE;
@@ -23,5 +36,7 @@ module.exports = ({ config }) => {
       throw new Error('EXPO_PUBLIC_ANDROID_STORE_URL must be set for production (the forced-update screen links to it).');
     }
   }
+  const firebase = googleServicesFile();
+  if (firebase) config.android = { ...config.android, googleServicesFile: firebase };
   return config;
 };

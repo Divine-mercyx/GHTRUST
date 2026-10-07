@@ -1,7 +1,8 @@
+import os
 from functools import lru_cache
 from typing import List
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +19,11 @@ _INSECURE_SECRETS = frozenset(
 SUPPORTED_SMS_PROVIDERS = frozenset({"termii"})
 # Optional modules that are fully built and may be switched on in production.
 LIVE_FEATURES = ("wallet", "investments")
+
+
+# Railway sets these in every deployment. Behind its edge proxy the socket peer is the
+# proxy, so with 0 every customer shared one IP for rate limits.
+_RAILWAY_ENV_VARS = ("RAILWAY_ENVIRONMENT_NAME", "RAILWAY_ENVIRONMENT", "RAILWAY_PROJECT_ID")
 
 
 def _is_local_url(url: str) -> bool:
@@ -64,8 +70,9 @@ class Settings(BaseSettings):
     # Number of reverse proxies in front of the API that append to
     # X-Forwarded-For. 0 = trust nothing and use the socket peer address.
     # Set to 1 behind a single load balancer. Getting this wrong lets clients
-    # spoof their IP and evade per-IP rate limits.
-    trusted_proxy_count: int = 0
+    # spoof their IP and evade per-IP rate limits. Left unset on Railway it is 1
+    # (Railway's edge proxy), otherwise 0; see _default_proxy_count.
+    trusted_proxy_count: int | None = None
 
     # SMS OTP delivery: "" (none) or "termii". With SMS_MOCK=false and no
     # provider, OTP sends fail loudly instead of silently.
@@ -256,6 +263,12 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         return self.app_env.lower() in {"production", "prod"}
 
+    @model_validator(mode="after")
+    def _default_proxy_count(self) -> "Settings":
+        if self.trusted_proxy_count is None:
+            self.trusted_proxy_count = 1 if any(os.environ.get(v) for v in _RAILWAY_ENV_VARS) else 0
+        return self
+
     def production_config_errors(self) -> list[str]:
         """Misconfigurations that must block a production boot."""
         errors: list[str] = []
@@ -279,6 +292,19 @@ class Settings(BaseSettings):
             errors.append(
                 f"Payment provider '{self.active_payment_provider}' is in mock mode or missing credentials"
             )
+        # Live keys against a sandbox (or test keys) would take real customers' money into a
+        # test system, or never move it at all.
+        provider = self.active_payment_provider
+        if provider == "monnify" and (
+            "sandbox" in self.monnify_base_url or self.monnify_api_key.startswith("MK_TEST_")
+        ):
+            errors.append("Monnify is on the sandbox: set MONNIFY_BASE_URL=https://api.monnify.com and live keys")
+        if provider == "stanbic" and "sandbox" in self.stanbic_base_url:
+            errors.append("STANBIC_BASE_URL is the sandbox: set the production URL Stanbic gave you")
+        if provider == "paystack" and self.paystack_secret_key.startswith("sk_test_"):
+            errors.append("PAYSTACK_SECRET_KEY is a test key (sk_test_)")
+        if "sandbox" in self.dojah_base_url:
+            errors.append("DOJAH_BASE_URL is the sandbox: set it to https://api.dojah.io")
         if not self.active_webhook_secret:
             errors.append(
                 f"Webhook signing secret for '{self.active_payment_provider}' is not configured"

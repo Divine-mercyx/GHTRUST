@@ -19,7 +19,7 @@ from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -34,6 +34,7 @@ from app.models.base import TransactionStatus
 from app.modules.loans.servicing import LoanServicingService
 from app.modules.payments.ledger_service import LedgerService
 from app.modules.payments.models import (
+    PaymentChannel,
     PaymentDirection,
     PaymentProvider,
     PaymentTransaction,
@@ -149,6 +150,8 @@ async def _settle_inbound(db: AsyncSession, rail, tx: PaymentTransaction) -> boo
 
 
 async def run_reconcile_payments(limit: int = 100) -> dict:
+    from app.modules.payments.card_funding import CARD_PREFIX, CardFundingService, is_card_topup
+
     matched = errors = 0
     rail = get_payment_client()
     provider = _active_provider()
@@ -157,7 +160,14 @@ async def run_reconcile_payments(limit: int = 100) -> dict:
             await db.execute(
                 select(PaymentTransaction.id)
                 .where(
-                    PaymentTransaction.provider == provider,
+                    # Card top-ups are always Monnify, whichever rail handles transfers.
+                    or_(
+                        PaymentTransaction.provider == provider,
+                        and_(
+                            PaymentTransaction.channel == PaymentChannel.CARD,
+                            PaymentTransaction.provider_reference.startswith(CARD_PREFIX),
+                        ),
+                    ),
                     PaymentTransaction.status == TransactionStatus.PENDING,
                 )
                 .order_by(PaymentTransaction.created_at.asc())
@@ -170,7 +180,10 @@ async def run_reconcile_payments(limit: int = 100) -> dict:
                 tx = await db.get(PaymentTransaction, tx_id)
                 if tx is None or tx.status != TransactionStatus.PENDING:
                     continue
-                if tx.direction == PaymentDirection.OUTBOUND:
+                if is_card_topup(tx):
+                    # Looked up by our payment reference, credited with the card flow's key.
+                    settled = await CardFundingService(db).settle(tx)
+                elif tx.direction == PaymentDirection.OUTBOUND:
                     settled = await _settle_outbound(db, rail, tx)
                 else:
                     settled = await _settle_inbound(db, rail, tx)

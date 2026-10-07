@@ -42,8 +42,13 @@ are no plans at all**. Edit them, or take them off sale, before launch: their ra
    `paymentReference`), or `GET /api/v1/wallet/fund/card/{reference}`, which asks Monnify. The app polls it.
    Both credit through the same ledger idempotency key, so a payment is credited once.
 
-Card top-ups need `PAYMENT_PROVIDER=monnify`. With Monnify in mock mode (never allowed in production) a top-up
-is credited at once, so demo servers can test the whole flow.
+4. If neither happened (webhook missed, customer closed the app), the `reconcile_payments` job (worker + beat)
+   asks Monnify by payment reference and credits it. A checkout still unpaid after 48 hours is closed as
+   "not completed".
+
+Card top-ups use Monnify: as the main rail (`PAYMENT_PROVIDER=monnify`), or with live Monnify keys set alongside
+another rail such as Stanbic. With Monnify in mock mode (never allowed in production) a top-up is credited at
+once, so demo servers can test the whole flow.
 
 ## Switching it on
 
