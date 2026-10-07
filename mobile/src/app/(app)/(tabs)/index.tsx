@@ -327,14 +327,14 @@ type Nudge = {
 
 /** One nudge at most: a loan offer to accept, then documents to fix, then an unfinished draft. */
 function pickNudge(apps: ApplicationSummary[]): Nudge | null {
-  const offer = apps.find((a) => a.status === 'approved' && !a.offer_accepted_at);
+  const offer = apps.find((a) => a.status === 'offer_sent' || (a.status === 'approved' && !a.offer_accepted_at));
   if (offer) {
     return {
       href: `/applications/${offer.id}/offer`,
       icon: 'checkmark-circle-outline',
       iconColor: colors.yield,
       accent: colors.yield,
-      title: 'Your loan is approved',
+      title: offer.status === 'offer_sent' ? 'Your loan offer is ready' : 'Your loan is approved',
       subtitle: `${offer.product_name} · review your offer`,
     };
   }

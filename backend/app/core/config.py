@@ -299,8 +299,25 @@ class Settings(BaseSettings):
             "sandbox" in self.monnify_base_url or self.monnify_api_key.startswith("MK_TEST_")
         ):
             errors.append("Monnify is on the sandbox: set MONNIFY_BASE_URL=https://api.monnify.com and live keys")
-        if provider == "stanbic" and "sandbox" in self.stanbic_base_url:
-            errors.append("STANBIC_BASE_URL is the sandbox: set the production URL Stanbic gave you")
+        if provider == "stanbic":
+            if self.stanbic_portal_sandbox:
+                errors.append("STANBIC_PORTAL_SANDBOX must be false in production (it uses the developer-portal test APIs)")
+            sandbox_urls = [
+                name
+                for name in (
+                    "stanbic_base_url",
+                    "stanbic_nps_base_url",
+                    "stanbic_name_enquiry_base_url",
+                    "stanbic_transaction_history_base_url",
+                    "stanbic_oauth_token_url",
+                )
+                if "sandbox" in getattr(self, name) or "testapi." in getattr(self, name)
+            ]
+            if sandbox_urls:
+                errors.append(
+                    "Stanbic URLs point at the sandbox: set the production values for "
+                    + ", ".join(n.upper() for n in sandbox_urls)
+                )
         if provider == "paystack" and self.paystack_secret_key.startswith("sk_test_"):
             errors.append("PAYSTACK_SECRET_KEY is a test key (sk_test_)")
         if "sandbox" in self.dojah_base_url:

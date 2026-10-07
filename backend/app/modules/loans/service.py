@@ -757,6 +757,9 @@ class LoanService:
             ApplicationStatus.SUBMITTED,
             ApplicationStatus.UNDER_REVIEW,
             ApplicationStatus.DOCUMENTS_INCOMPLETE,
+            # Waiting for the customer: staff can still correct the terms (the customer then
+            # sees the new offer; accepting the old one is refused) or reject the application.
+            ApplicationStatus.OFFER_SENT,
             ApplicationStatus.APPROVED,
         }
     )

@@ -192,3 +192,40 @@ class TestDatabaseUrl:
     def test_explicit_asyncpg_url_is_untouched(self):
         url = "postgresql+asyncpg://u:p@db:5432/app"
         assert Settings(_env_file=None, database_url=url).async_database_url == url
+
+
+class TestStanbicProductionGuard:
+    STANBIC_LIVE = {
+        **LIVE_PROD,
+        "payment_provider": "stanbic",
+        "stanbic_mock": False,
+        "stanbic_client_id": "id",
+        "stanbic_client_secret": "secret",
+        "stanbic_webhook_secret": "whsec",
+        "stanbic_portal_sandbox": False,
+        "stanbic_base_url": "https://api.stanbicibtc.com",
+        "stanbic_nps_base_url": "https://api.stanbicibtc.com/nps",
+        "stanbic_name_enquiry_base_url": "https://api.stanbicibtc.com/nameenquiry",
+        "stanbic_transaction_history_base_url": "https://api.stanbicibtc.com/history",
+        "stanbic_oauth_token_url": "https://api.stanbicibtc.com/oauth2/token",
+    }
+
+    def test_live_stanbic_passes(self):
+        errors = Settings(_env_file=None, **self.STANBIC_LIVE).production_config_errors()
+        assert not any("Stanbic" in e or "STANBIC" in e for e in errors), errors
+
+    def test_portal_sandbox_defaults_are_refused(self):
+        s = Settings(
+            _env_file=None, **{**self.STANBIC_LIVE, "stanbic_portal_sandbox": True, "stanbic_nps_base_url": Settings.model_fields["stanbic_nps_base_url"].default}
+        )
+        errors = s.production_config_errors()
+        assert any("STANBIC_PORTAL_SANDBOX" in e for e in errors), errors
+        assert any("STANBIC_NPS_BASE_URL" in e for e in errors), errors
+
+
+def test_stanbic_status_without_a_code_is_pending_not_failed():
+    from app.integrations.stanbic.portal_sandbox import map_nps_transfer_status
+
+    assert map_nps_transfer_status({}) == "PENDING"
+    assert map_nps_transfer_status({"responseCode": "00", "destAcctCredited": "Y"}) == "SUCCESS"
+    assert map_nps_transfer_status({"responseCode": "91"}) == "FAILED"

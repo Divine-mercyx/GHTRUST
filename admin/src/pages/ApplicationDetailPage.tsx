@@ -266,6 +266,13 @@ function ApplicationDetailContent() {
                 </div>
               )}
 
+              {app.status === 'offer_sent' && (
+                <div className="mt-5 px-4 py-3 rounded-xl bg-amber-50 ring-1 ring-amber-200 text-[13px] text-amber-800">
+                  The loan offer is with the customer. The workflow continues when they accept it in the app; if they
+                  decline, it comes back to credit review. You can still correct the terms or reject the application.
+                </div>
+              )}
+
               {(canAct || canDisburseNow) && (
                 <div className="mt-5 space-y-3">
                   <textarea

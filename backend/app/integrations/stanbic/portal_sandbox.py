@@ -62,7 +62,7 @@ def _check_response_code(payload: dict[str, Any]) -> None:
         )
 
 
-@transient_retry(retry_on=(StanbicPortalRetryable,))
+@transient_retry()  # StanbicPortalRetryable is a TransientRailError, so it is retried
 async def _portal_request(
     method: str,
     url: str,
@@ -104,6 +104,9 @@ def map_nps_transfer_status(payload: dict[str, Any]) -> str:
     code = str(payload.get("responseCode") or "").strip()
     msg = str(payload.get("responseMsg") or "").upper()
     credited = str(payload.get("destAcctCredited") or "").upper()
+    if not code:
+        # No verdict: never treat as failed, or the customer is refunded for money that left.
+        return TRANSFER_STATUS_PENDING
     if code != "00":
         return TRANSFER_STATUS_FAILED
     if "PROCESS" in msg or credited in ("N", "NO", "FALSE"):

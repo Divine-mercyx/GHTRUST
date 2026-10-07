@@ -15,8 +15,9 @@ import { Screen } from '@/components/Screen';
 import { Banner, CardSkeleton, ErrorState } from '@/components/States';
 import { Text } from '@/components/Text';
 import { TransactionPinSheet } from '@/components/TransactionPinSheet';
+import { confirm } from '@/lib/confirm';
 import { date, dateTime, naira, relativeDue } from '@/lib/format';
-import { keys, useLoanOffer } from '@/lib/queries';
+import { keys, useApplication, useLoanOffer } from '@/lib/queries';
 import { CADENCE } from '@/lib/status';
 import { colors, font, radius, space } from '@/theme/tokens';
 
@@ -30,6 +31,8 @@ export default function LoanOfferScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
   const offer = useLoanOffer(id);
+  // Only an offer sent at the credit stage can be declined; the server refuses others.
+  const canDecline = useApplication(id).data?.status === 'offer_sent';
   const [agreed, setAgreed] = useState(false);
   const [askPin, setAskPin] = useState(false);
   const [showSchedule, setShowSchedule] = useState(true);
@@ -109,13 +112,22 @@ export default function LoanOfferScreen() {
       footer={
         accepted ? null : (
           <View style={styles.footer}>
-            <Button
-              title="Decline offer"
-              variant="secondary"
-              loading={reject.isPending}
-              disabled={accept.isPending}
-              onPress={() => reject.mutate()}
-            />
+            {canDecline ? (
+              <Button
+                title="Decline offer"
+                variant="secondary"
+                loading={reject.isPending}
+                disabled={accept.isPending}
+                onPress={() =>
+                  confirm(
+                    'Decline this offer?',
+                    'Your application goes back to our credit team. They may contact you about different terms.',
+                    'Decline',
+                    () => reject.mutate(),
+                  )
+                }
+              />
+            ) : null}
             <Button
               title="Accept offer"
               icon="checkmark-circle"

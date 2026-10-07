@@ -499,7 +499,8 @@ class StanbicClient:
                 status_payload = {
                     "clientRefId": reference[:32],
                     "srcAcctNum": self.settlement_account_number or "",
-                    "tranDate": stanbic_portal.portal_tran_date(),
+                    # The day the transfer was sent, not today (reconciliation runs later).
+                    "tranDate": ctx.get("_tran_date") or stanbic_portal.portal_tran_date(),
                 }
             body = await stanbic_portal.transfer_status(status_payload)
             status = stanbic_portal.map_nps_transfer_status(body)

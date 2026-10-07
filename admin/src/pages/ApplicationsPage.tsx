@@ -44,6 +44,7 @@ function QueueStatusPill({ status }: { status: string }) {
   const config: Record<string, { label: string; bg: string; text: string; dot: string }> = {
     under_review: { label: 'Pending', bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500' },
     submitted: { label: 'Submitted', bg: 'bg-sky-50', text: 'text-sky-700', dot: 'bg-sky-500' },
+    offer_sent: { label: 'Offer with customer', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' },
     approved: { label: 'Approved', bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
     disbursed: { label: 'Disbursed', bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
     rejected: { label: 'Rejected', bg: 'bg-rose-50', text: 'text-rose-700', dot: 'bg-rose-500' },

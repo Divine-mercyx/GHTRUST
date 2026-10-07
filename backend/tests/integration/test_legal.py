@@ -12,6 +12,7 @@ from tests.integration.test_disbursement_lifecycle import (
     accept_loan_offer,
     approved_application,
     disburse,
+    finish_approval,
     submitted_application,
 )
 
@@ -96,11 +97,9 @@ class TestLoanOffer:
         app_id = await approved_application(
             api_client, db_session, admin_headers, accept_offer=False
         )
+        # The workflow is waiting for the customer: nothing can be paid out yet.
         blocked = await disburse(api_client, app_id, admin_headers)
-        assert (
-            blocked.status_code == 409
-            and blocked.json()["code"] == "OFFER_NOT_ACCEPTED"
-        )
+        assert blocked.status_code == 409
 
         accepted = await accept_loan_offer(api_client, app_id)
         assert accepted["accepted_at"] is not None
@@ -112,6 +111,7 @@ class TestLoanOffer:
             )
         ).scalar_one()
         assert row.application_id == app_id and row.terms_hash == accepted["terms_hash"]
+        await finish_approval(api_client, app_id, admin_headers)
         assert (await disburse(api_client, app_id, admin_headers)).status_code == 200
 
     async def test_wrong_pin_or_stale_terms_are_refused(

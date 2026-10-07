@@ -15,7 +15,7 @@ import httpx
 
 from app.core.config import settings
 from app.integrations.payments.schemas import PaymentRailError
-from app.integrations.stanbic.constants import ACCOUNT_OPENING_SUCCESS_CODES, PATH_CURRENT_ACCOUNT_OPENING
+from app.integrations.stanbic.constants import PATH_CURRENT_ACCOUNT_OPENING
 from app.integrations.stanbic.portal_sandbox import _check_response_code
 
 

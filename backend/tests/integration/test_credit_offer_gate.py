@@ -1,7 +1,11 @@
 """Post-credit customer offer gate pauses workflow until accept or reject."""
 
-from tests.integration.test_disbursement_lifecycle import accept_loan_offer, submitted_application, verify_all_documents
-from tests.integration.test_loan_workflow_api import _login
+from tests.integration.test_disbursement_lifecycle import (
+    _login,
+    accept_loan_offer,
+    submitted_application,
+    verify_all_documents,
+)
 
 
 async def test_credit_approval_sends_offer_and_resumes_on_accept(api_client, db_session, admin_headers):
@@ -61,3 +65,24 @@ async def test_customer_can_reject_offer(api_client, db_session, admin_headers):
     assert rejected.status_code == 204
     detail = await api_client.get(f"/api/v1/admin/loans/applications/{app_id}", headers=admin_headers)
     assert detail.json()["status"] == "under_review"
+
+
+async def test_staff_can_reject_while_the_offer_waits(api_client, db_session, admin_headers):
+    app_id = await submitted_application(api_client, db_session)
+    await verify_all_documents(api_client, app_id, admin_headers)
+    for _ in range(2):
+        await api_client.post(
+            f"/api/v1/admin/loans/applications/{app_id}/stage-action",
+            json={"action": "approved", "note": "ok"},
+            headers=admin_headers,
+        )
+    rejected = await api_client.patch(
+        f"/api/v1/admin/loans/applications/{app_id}/status",
+        json={"status": "rejected", "note": "Fraud check failed"},
+        headers=admin_headers,
+    )
+    assert rejected.status_code == 200, rejected.text
+    assert rejected.json()["status"] == "rejected"
+    customer_headers = {"Authorization": f"Bearer {await _login(api_client)}"}
+    offer = await api_client.get(f"/api/v1/loans/me/applications/{app_id}/offer", headers=customer_headers)
+    assert offer.status_code == 409

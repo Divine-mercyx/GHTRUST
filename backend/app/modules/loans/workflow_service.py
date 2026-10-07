@@ -273,7 +273,7 @@ class WorkflowService:
         stage_name = stage.name
         stage_id = stage.id
 
-        if is_credit_offer_gate_stage(stage):
+        if is_credit_offer_gate_stage(stage) and not await self._offer_still_accepted(application):
             amount = application.approved_amount or application.requested_amount
             if amount is None or amount <= 0:
                 raise HTTPException(
@@ -339,6 +339,18 @@ class WorkflowService:
                 await notify.application_approved(self.db, application)
 
         return application
+
+    @staticmethod
+    async def _offer_still_accepted(application: LoanApplication) -> bool:
+        """The customer already accepted an offer with today's terms (e.g. a second credit stage)."""
+        if not application.offer_accepted_at or not application.offer_terms_hash:
+            return False
+        from app.modules.legal.service import offer_terms_hash
+
+        try:
+            return offer_terms_hash(application) == application.offer_terms_hash
+        except (ValueError, HTTPException):
+            return False
 
     async def resume_after_customer_offer_accept(self, application: LoanApplication) -> None:
         """Move the pipeline forward after the borrower accepts a post-credit offer."""

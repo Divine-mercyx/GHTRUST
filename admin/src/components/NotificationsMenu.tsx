@@ -52,6 +52,7 @@ const STATUS_LABEL: Record<string, string> = {
   submitted: 'New application',
   under_review: 'In review',
   documents_incomplete: 'Waiting on documents',
+  offer_sent: 'Offer with customer',
   approved: 'Approved',
   ready_to_disburse: 'Ready to disburse',
 }

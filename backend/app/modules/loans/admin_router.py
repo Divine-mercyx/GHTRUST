@@ -155,13 +155,17 @@ async def admin_offer_preview(
     repayment_cadence: str | None = Query(default=None),
 ):
     """Same math as the mobile offer; optional query params preview unsaved term edits."""
+    from sqlalchemy.orm.attributes import set_committed_value
+
     application = await LoanService(db)._get_application(application_id)
+    # set_committed_value changes the loaded object without marking it dirty: the request
+    # session commits at the end, and a preview must never save the edited terms.
     if approved_amount is not None:
-        application.approved_amount = approved_amount
+        set_committed_value(application, "approved_amount", approved_amount)
     if tenure_months is not None:
-        application.approved_tenure_months = tenure_months
+        set_committed_value(application, "approved_tenure_months", tenure_months)
     if repayment_cadence:
-        application.repayment_cadence = repayment_cadence
+        set_committed_value(application, "repayment_cadence", repayment_cadence)
     try:
         return _offer(build_offer(application))
     except AppError:
