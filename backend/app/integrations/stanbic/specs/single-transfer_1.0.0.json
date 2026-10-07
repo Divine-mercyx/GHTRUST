@@ -1,0 +1,683 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "version": "1.0.0",
+        "title": "Single Transfer",
+        "description": "The Single Transfer API enables clients to initiate a one-time fund transfer between two bank accounts.",
+        "contact": {
+            "name": "Integration APIs Team",
+            "email": "integrationsapis@stanbicibtc.com"
+        }
+    },
+    "servers": [
+        {
+            "url": "https://testapi.stanbicibtc.com/test/sandbox/nps"
+        }
+    ],
+    "paths": {
+        "/single-transfer": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "$ref": "#/components/responses/200"
+                    },
+                    "201": {
+                        "$ref": "#/components/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/401"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/500"
+                    }
+                },
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/singleTransfer"
+                            }
+                        }
+                    },
+                    "description": "This is a sample request body."
+                },
+                "summary": "The Single Transfer API enables clients to initiate a one-time fund transfer between two bank accounts.",
+                "description": "The Single Transfer API enables clients to initiate a one-time fund transfer between two bank accounts."
+            },
+            "summary": "The Single Transfer API enables clients to initiate a one-time fund transfer between two bank accounts.",
+            "description": "The Single Transfer API enables clients to initiate a one-time fund transfer between two bank accounts."
+        },
+        "/trans-status": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "title": "Succesful",
+                                    "type": "string",
+                                    "description": "This is a sample success response payload.",
+                                    "example": {
+                                        "responseMsg": "Transaction Details Successful",
+                                        "responseCode": "00",
+                                        "amount": "2000.00",
+                                        "destAcctNum": "**********",
+                                        "destAcctCredited": "***********",
+                                        "chargeAmt": "pelmuzaconeo",
+                                        "vat": "sanf",
+                                        "clientTranRefId": "6503418367574016",
+                                        "bankCode": "999221",
+                                        "requestDate": "12/19/2040",
+                                        "requestTime": "01:28",
+                                        "srcAcctNum": "********",
+                                        "bankRefid": "*********"
+                                    }
+                                },
+                                "examples": {
+                                    "Succesful": {
+                                        "description": "This is a sample success response payload.",
+                                        "value": {
+                                            "responseMsg": "Transaction Details Successful",
+                                            "responseCode": "00",
+                                            "amount": "2000.00",
+                                            "destAcctNum": "**********",
+                                            "destAcctCredited": "***********",
+                                            "chargeAmt": "pelmuzaconeo",
+                                            "vat": "sanf",
+                                            "clientTranRefId": "6503418367574016",
+                                            "bankCode": "999221",
+                                            "requestDate": "12/19/2040",
+                                            "requestTime": "01:28",
+                                            "srcAcctNum": "********",
+                                            "bankRefid": "*********"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "title": "Bad request",
+                                    "type": "string",
+                                    "example": {
+                                        "responseMsg": "Transaction Details does not exist",
+                                        "responseCode": "99"
+                                    },
+                                    "description": "This is a sample failure response payload."
+                                },
+                                "examples": {
+                                    "Bad request": {
+                                        "description": "This is a sample failure response payload.",
+                                        "value": {
+                                            "responseMsg": "Transaction Details does not exist",
+                                            "responseCode": "99"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "title": "Unauthorized",
+                                    "type": "string",
+                                    "description": "This is a sample unauthorized response payload.",
+                                    "example": {
+                                        "httpCode": "401",
+                                        "httpMessage": "Unauthorized",
+                                        "moreInformation": "Invalid client id or secret."
+                                    }
+                                },
+                                "examples": {
+                                    "Unauthorized": {
+                                        "description": "This is a sample unauthorized response payload.",
+                                        "value": {
+                                            "httpCode": "401",
+                                            "httpMessage": "Unauthorized",
+                                            "moreInformation": "Invalid client id or secret."
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Service Unavailable",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "title": "Service Unavailable",
+                                    "type": "string",
+                                    "description": "This is a sample response payload for Service Unavailable",
+                                    "example": {
+                                        "responsecode": "55",
+                                        "responseMsg": "Service Currently Unavailable"
+                                    }
+                                },
+                                "examples": {
+                                    "Service Unavailable": {
+                                        "description": "This is a sample unauthorized response payload.",
+                                        "value": {
+                                            "httpCode": "401",
+                                            "httpMessage": "Unauthorized",
+                                            "moreInformation": "Invalid client id or secret."
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/tranStatus"
+                            }
+                        }
+                    }
+                },
+                "summary": "The Transaction Status API allows clients to verify the current state of a previously initiated transaction.",
+                "description": "The Transaction Status API allows clients to verify the current state of a previously initiated transaction."
+            },
+            "description": "The Transaction Status API allows clients to verify the current state of a previously initiated transaction.",
+            "summary": "The Transaction Status API allows clients to verify the current state of a previously initiated transaction."
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "ClientId": {
+                "type": "apiKey",
+                "name": "Client-Id",
+                "in": "header"
+            },
+            "ClientSecret": {
+                "type": "apiKey",
+                "name": "Client-Secret",
+                "in": "header"
+            }
+        },
+        "schemas": {
+            "tranStatus": {
+                "type": "object",
+                "properties": {
+                    "srcAcctNum": {
+                        "type": "string",
+                        "enum": [
+                            "**********"
+                        ]
+                    },
+                    "amount": {
+                        "type": "string",
+                        "enum": [
+                            "***********"
+                        ]
+                    },
+                    "destAcctNum": {
+                        "type": "string",
+                        "enum": [
+                            "*********"
+                        ]
+                    },
+                    "tranDate": {
+                        "type": "string",
+                        "enum": [
+                            "10-AUG-2023"
+                        ]
+                    },
+                    "clientRefId": {
+                        "type": "string",
+                        "enum": [
+                            "***********"
+                        ]
+                    },
+                    "bankRefId": {
+                        "type": "string",
+                        "enum": [
+                            "***********"
+                        ]
+                    },
+                    "destBankCode": {
+                        "type": "string",
+                        "enum": [
+                            "999221"
+                        ]
+                    }
+                },
+                "example": {
+                    "srcAcctNum": "********",
+                    "amount": 50,
+                    "destAcctNum": "*******",
+                    "tranDate": "10-AUG-2023",
+                    "clientRefId": "********",
+                    "bankRefId": "*******",
+                    "destBankCode": "999221"
+                },
+                "description": "This is the schema for the transaction status API."
+            },
+            "singleTransfer": {
+                "type": "object",
+                "properties": {
+                    "clientRefId": {
+                        "type": "string",
+                        "enum": [
+                            "STB-11FFLLKJ"
+                        ]
+                    },
+                    "srcAcctName": {
+                        "type": "string",
+                        "enum": [
+                            "John Doe"
+                        ]
+                    },
+                    "srcAcctNum": {
+                        "type": "string",
+                        "enum": [
+                            "*************"
+                        ]
+                    },
+                    "transAmount": {
+                        "type": "string",
+                        "enum": [
+                            "**********"
+                        ]
+                    },
+                    "srcAcctNarration": {
+                        "type": "string",
+                        "enum": [
+                            "Testing"
+                        ]
+                    },
+                    "destAcctName": {
+                        "type": "string",
+                        "enum": [
+                            "Jane Doe"
+                        ]
+                    },
+                    "destAcctNum": {
+                        "type": "string",
+                        "enum": [
+                            "**********"
+                        ]
+                    },
+                    "destAcctNarration": {
+                        "type": "string",
+                        "enum": [
+                            "Testing"
+                        ]
+                    },
+                    "destinationAccountBankCode": {
+                        "type": "string",
+                        "enum": [
+                            "*********"
+                        ]
+                    }
+                },
+                "example": {
+                    "clientRefId": "kjhgfoouio0iuh",
+                    "srcAcctName": "*********",
+                    "srcAcctNum": "********",
+                    "transAmount": 3330,
+                    "srcAcctNarration": "Testing3",
+                    "destAcctName": "*********",
+                    "destAcctNum": "*******",
+                    "destAcctNarration": "Testing3",
+                    "destinationAccountBankCode": "999012"
+                },
+                "description": "This is the schema for the single transfer API"
+            },
+            "tranStatusSuccessPayload": {
+                "type": "string",
+                "example": {
+                    "responseMsg": "Transaction Details Successful",
+                    "responseCode": "00",
+                    "amount": "2000.00",
+                    "destAcctNum": "**********",
+                    "destAcctCredited": "***********",
+                    "chargeAmt": "pelmuzaconeo",
+                    "vat": "sanf",
+                    "clientTranRefId": "6503418367574016",
+                    "bankCode": "999221",
+                    "requestDate": "12/19/2040",
+                    "requestTime": "01:28",
+                    "srcAcctNum": "********",
+                    "bankRefid": "*********"
+                },
+                "description": "This is the schema for the transaction status API success payload."
+            },
+            "tranStatusFailurePayload": {
+                "type": "string",
+                "example": {
+                    "responseMsg": "Transaction Details does not exist",
+                    "responseCode": "99"
+                },
+                "description": "This is the schema for the transaction status API failure payload."
+            },
+            "singleTransferFailurePayload": {
+                "type": "object",
+                "properties": {
+                    "clientRefId": {
+                        "type": "string",
+                        "example": "STB-HOOLK"
+                    },
+                    "bankRefId": {
+                        "type": "string",
+                        "example": "ST-20251016081011903072-6"
+                    },
+                    "responseCode": {
+                        "type": "string",
+                        "example": "99"
+                    },
+                    "responseMsg": {
+                        "type": "string",
+                        "example": "ERR-010: DESTINATION BANK VALIDATION FAILED"
+                    }
+                },
+                "description": "This is the schema for the single transfer API failure payload."
+            },
+            "singleTransferSuccessPayloadInbound": {
+                "type": "object",
+                "properties": {
+                    "clientRefId": {
+                        "type": "string",
+                        "example": "lkjhgfdfrtyuiop-p0o9i8uytgfv"
+                    },
+                    "bankRefId": {
+                        "type": "string",
+                        "example": "ST -20251002145417536839-3"
+                    },
+                    "responseCode": {
+                        "type": "string",
+                        "example": "00"
+                    },
+                    "responseMsg": {
+                        "type": "string",
+                        "example": "Transaction is processing"
+                    },
+                    "responseDetails": {
+                        "type": "object",
+                        "properties": {
+                            "srcAcctName": {
+                                "type": "string",
+                                "example": "John Doe"
+                            },
+                            "srcAcctNum": {
+                                "type": "string",
+                                "example": "*******"
+                            },
+                            "transAmount": {
+                                "type": "string",
+                                "example": "390.00"
+                            },
+                            "tranCharges": {
+                                "type": "string",
+                                "example": "10.0"
+                            },
+                            "vat": {
+                                "type": "string",
+                                "example": "0.75"
+                            },
+                            "srcAcctNarration": {
+                                "type": "string",
+                                "example": "Testing3"
+                            },
+                            "destAcctName": {
+                                "type": "string",
+                                "example": "Jane Doe"
+                            },
+                            "destAcctNum": {
+                                "type": "string",
+                                "example": "********"
+                            },
+                            "destAcctBankCode": {
+                                "type": "string",
+                                "example": "999023"
+                            },
+                            "destAcctNarration": {
+                                "type": "string",
+                                "example": "Testing3"
+                            },
+                            "channelCode": {
+                                "type": "string",
+                                "example": "3"
+                            },
+                            "destAcctKycTier": {
+                                "type": "string",
+                                "example": "3"
+                            },
+                            "srcAcctCurrency": {
+                                "type": "string",
+                                "example": "NGN"
+                            },
+                            "destAcctCurrency": {
+                                "type": "string",
+                                "example": "NGN"
+                            },
+                            "destAcctCredited": {
+                                "type": "string",
+                                "example": "1"
+                            },
+                            "tranDate": {
+                                "type": "string",
+                                "example": "02-OCT -2025"
+                            },
+                            "tranDateTime": {
+                                "type": "string",
+                                "example": "02-OCT -2025 14:54:43"
+                            }
+                        }
+                    }
+                },
+                "description": "This is the schema for the single transfer API success payload for inbound transactions."
+            },
+            "singleTransferSuccessPayloadOutbound": {
+                "type": "object",
+                "properties": {
+                    "clientRefId": {
+                        "type": "string",
+                        "example": ";lkjhgfdfrtyuiop-p0o9i8uytgfv"
+                    },
+                    "bankRefId": {
+                        "type": "string",
+                        "example": "ST -20251002145417536839-3"
+                    },
+                    "responseCode": {
+                        "type": "string",
+                        "example": "00"
+                    },
+                    "responseMsg": {
+                        "type": "string",
+                        "example": "Transaction is processing"
+                    },
+                    "responseDetails": {
+                        "type": "object",
+                        "properties": {
+                            "srcAcctName": {
+                                "type": "string",
+                                "example": "John Doe"
+                            },
+                            "srcAcctNum": {
+                                "type": "string",
+                                "example": "**********"
+                            },
+                            "transAmount": {
+                                "type": "string",
+                                "example": "390.00"
+                            },
+                            "tranCharges": {
+                                "type": "string",
+                                "example": "10.0"
+                            },
+                            "vat": {
+                                "type": "string",
+                                "example": "0.75"
+                            },
+                            "srcAcctNarration": {
+                                "type": "string",
+                                "example": "Testing3"
+                            },
+                            "destAcctName": {
+                                "type": "string",
+                                "example": "Jane Doe"
+                            },
+                            "destAcctNum": {
+                                "type": "string",
+                                "example": "********"
+                            },
+                            "destAcctBankCode": {
+                                "type": "string",
+                                "example": "999023"
+                            },
+                            "destAcctNarration": {
+                                "type": "string",
+                                "example": "Testing3"
+                            },
+                            "channelCode": {
+                                "type": "string",
+                                "example": "3"
+                            },
+                            "destAcctKycTier": {
+                                "type": "string",
+                                "example": "3"
+                            },
+                            "srcAcctCurrency": {
+                                "type": "string",
+                                "example": "NGN"
+                            },
+                            "destAcctCurrency": {
+                                "type": "string",
+                                "example": "NGN"
+                            },
+                            "destAcctCredited": {
+                                "type": "string",
+                                "example": "********"
+                            },
+                            "tranDate": {
+                                "type": "string",
+                                "example": "02-OCT -2025"
+                            },
+                            "tranDateTime": {
+                                "type": "string",
+                                "example": "02-OCT -2025 14:54:43"
+                            }
+                        }
+                    }
+                },
+                "description": "This is the schema for the single transfer API success payload for outbound transactions."
+            }
+        },
+        "responses": {
+            "200": {
+                "description": "Successful",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/singleTransferSuccessPayloadInbound"
+                        }
+                    }
+                }
+            },
+            "400": {
+                "description": "Bad request",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/singleTransferFailurePayload"
+                        }
+                    }
+                }
+            },
+            "401": {
+                "description": "Unauthorized",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "title": "Unauthorized",
+                            "type": "object",
+                            "properties": {
+                                "httpCode": {
+                                    "type": "string",
+                                    "example": "401"
+                                },
+                                "httpMessage": {
+                                    "type": "string",
+                                    "example": "Unauthorized"
+                                },
+                                "moreInformation": {
+                                    "type": "string",
+                                    "example": "Invalid client id or secret."
+                                }
+                            },
+                            "description": "This is a sample unauthorized response payload."
+                        }
+                    }
+                }
+            },
+            "500": {
+                "description": "Service Unavailable",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "title": "Service Unavailable",
+                            "type": "object",
+                            "properties": {
+                                "responsecode": {
+                                    "type": "string",
+                                    "example": "55"
+                                },
+                                "responseMsg": {
+                                    "type": "string",
+                                    "example": "Service Currently Unavailable"
+                                }
+                            },
+                            "description": "This is a sample response payload for Service Unavailable"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "security": [
+        {
+            "ClientId": [],
+            "ClientSecret": []
+        }
+    ],
+    "tags": [
+        {
+            "name": "REST",
+            "description": "RESTful APIs."
+        },
+        {
+            "name": "Transaction Data",
+            "description": "Captures transfer details including amounts, references, and settlement status"
+        },
+        {
+            "name": "Financial",
+            "description": "Handles single transfer payments, settlements, and reconciliation data"
+        },
+        {
+            "name": "PII",
+            "description": "Involves identifiable customer information such as names and account numbers"
+        },
+        {
+            "name": "Confidential",
+            "description": "Business-sensitive operations tied to transfers and customer accounts"
+        },
+        {
+            "name": "Stable",
+            "description": "Production-ready APIs."
+        }
+    ]
+}

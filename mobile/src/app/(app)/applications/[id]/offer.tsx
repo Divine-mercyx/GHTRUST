@@ -15,8 +15,9 @@ import { Screen } from '@/components/Screen';
 import { Banner, CardSkeleton, ErrorState } from '@/components/States';
 import { Text } from '@/components/Text';
 import { TransactionPinSheet } from '@/components/TransactionPinSheet';
-import { date, dateTime, naira } from '@/lib/format';
-import { keys, useLoanOffer } from '@/lib/queries';
+import { confirm } from '@/lib/confirm';
+import { date, dateTime, naira, relativeDue } from '@/lib/format';
+import { keys, useApplication, useLoanOffer } from '@/lib/queries';
 import { CADENCE } from '@/lib/status';
 import { colors, font, radius, space } from '@/theme/tokens';
 
@@ -30,10 +31,21 @@ export default function LoanOfferScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
   const offer = useLoanOffer(id);
+  // Only an offer sent at the credit stage can be declined; the server refuses others.
+  const canDecline = useApplication(id).data?.status === 'offer_sent';
   const [agreed, setAgreed] = useState(false);
   const [askPin, setAskPin] = useState(false);
-  const [showSchedule, setShowSchedule] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(true);
   const [showAgreement, setShowAgreement] = useState(false);
+
+  const reject = useMutation({
+    mutationFn: () => legal.rejectOffer(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: keys.application(id) });
+      queryClient.invalidateQueries({ queryKey: keys.applications });
+      router.back();
+    },
+  });
 
   const accept = useMutation({
     mutationFn: (pin: string) => legal.acceptOffer(id, offer.data!.terms_hash, pin),
@@ -88,6 +100,7 @@ export default function LoanOfferScreen() {
 
   const o = offer.data;
   const accepted = !!o.accepted_at;
+  const firstDue = o.schedule[0];
   // Wrong or locked PINs are shown in the PIN sheet itself.
   const pinError = accept.error instanceof ApiError && accept.error.code.startsWith('TRANSACTION_PIN_');
 
@@ -98,16 +111,34 @@ export default function LoanOfferScreen() {
       refreshing={offer.isRefetching}
       footer={
         accepted ? null : (
-          <Button
-            title="Accept offer"
-            icon="checkmark-circle"
-            disabled={!agreed}
-            loading={accept.isPending}
-            onPress={() => {
-              accept.reset();
-              setAskPin(true);
-            }}
-          />
+          <View style={styles.footer}>
+            {canDecline ? (
+              <Button
+                title="Decline offer"
+                variant="secondary"
+                loading={reject.isPending}
+                disabled={accept.isPending}
+                onPress={() =>
+                  confirm(
+                    'Decline this offer?',
+                    'Your application goes back to our credit team. They may contact you about different terms.',
+                    'Decline',
+                    () => reject.mutate(),
+                  )
+                }
+              />
+            ) : null}
+            <Button
+              title="Accept offer"
+              icon="checkmark-circle"
+              disabled={!agreed}
+              loading={accept.isPending}
+              onPress={() => {
+                accept.reset();
+                setAskPin(true);
+              }}
+            />
+          </View>
         )
       }>
       <TransactionPinSheet
@@ -117,6 +148,7 @@ export default function LoanOfferScreen() {
         onPin={(pin) => accept.mutateAsync(pin)}
       />
       {o.draft ? <Banner tone="info" message="Draft agreement wording, pending final legal review." /> : null}
+      {reject.error ? <Banner message={messageFor(reject.error)} /> : null}
       {accept.error && !pinError ? <Banner message={messageFor(accept.error)} /> : null}
       {accepted ? (
         <Banner
@@ -144,6 +176,12 @@ export default function LoanOfferScreen() {
           <HeroFact label="Total to repay" value={naira(o.total_repayable)} />
           <HeroFact label={`${o.installments} payments of`} value={naira(o.first_payment)} />
         </View>
+        {firstDue ? (
+          <Text variant="small" color="rgba(255,255,255,0.85)" style={{ marginTop: space.xs }}>
+            First payment: {naira(firstDue.amount)} on {date(firstDue.due_date)}
+            {relativeDue(firstDue.due_date) ? ` (${relativeDue(firstDue.due_date)})` : ''}
+          </Text>
+        ) : null}
       </View>
 
       <SectionHeader title="Key facts" />
@@ -180,7 +218,8 @@ export default function LoanOfferScreen() {
             ))}
           </Card>
           <Text variant="small" muted style={styles.note}>
-            Dates are estimated from today. Final dates are set from the day the loan is paid out.
+            Dates are estimated from today. Final dates are set from the day the loan is paid out. After that, we&apos;ll
+            remind you before each payment is due.
           </Text>
         </Animated.View>
       ) : null}
@@ -272,6 +311,7 @@ function Expander({ title, open, onToggle }: { title: string; open: boolean; onT
 }
 
 const styles = StyleSheet.create({
+  footer: { gap: space.sm },
   hero: { backgroundColor: colors.navy, borderRadius: radius.xl - 4, padding: space.xl, gap: 4 },
   heroRow: {
     flexDirection: 'row',

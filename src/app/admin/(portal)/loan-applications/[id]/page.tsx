@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight, Banknote, Check, CheckCircle2, Circle, Clock, Download, ExternalLink, FileText, Send, X, XCircle,
 } from "lucide-react";
@@ -92,6 +92,13 @@ export default function ApplicationDetailPage() {
       {a.rejection_reason && (
         <Notice tone="error" title="Rejected" className="mb-6">
           {a.rejection_reason}
+        </Notice>
+      )}
+
+      {a.status === "offer_sent" && (
+        <Notice tone="info" title="Waiting for customer" className="mb-6">
+          The loan offer is with the customer after credit approval. They must accept or decline in the app before the
+          workflow can continue.
         </Notice>
       )}
 
@@ -311,6 +318,87 @@ function StageActionCard({
 
 // ── Terms (approved amount, tenure, cadence) and manual rejection ────────
 
+function OfferSchedulePreview({
+  applicationId,
+  amount,
+  tenure,
+  cadence,
+}: {
+  applicationId: string;
+  amount: string;
+  tenure: string;
+  cadence: string;
+}) {
+  const [draft, setDraft] = useState({ amount, tenure, cadence });
+  useEffect(() => {
+    const timer = setTimeout(() => setDraft({ amount, tenure, cadence }), 400);
+    return () => clearTimeout(timer);
+  }, [amount, tenure, cadence]);
+
+  const params: { approved_amount?: string; tenure_months?: number; repayment_cadence?: string } = {};
+  if (draft.amount) params.approved_amount = String(draft.amount);
+  if (draft.tenure) params.tenure_months = Number(draft.tenure);
+  if (draft.cadence) params.repayment_cadence = draft.cadence;
+
+  const preview = useResource(
+    () => applicationsApi.offerPreview(applicationId, params),
+    [applicationId, draft.amount, draft.tenure, draft.cadence],
+  );
+
+  if (preview.loading && !preview.data) {
+    return (
+      <div className="mt-4 border-t border-line pt-4">
+        <Skeleton className="h-4 w-48" />
+        <Skeleton className="mt-3 h-24" />
+      </div>
+    );
+  }
+  if (preview.error) {
+    return (
+      <Notice tone="info" className="mt-4 border-t border-line pt-4" title="Repayment preview">
+        Set approved amount and tenure (months) to see the schedule the customer will get.
+      </Notice>
+    );
+  }
+  if (!preview.data) return null;
+  const o = preview.data;
+  const shown = o.schedule.slice(0, 8);
+  return (
+    <div className="mt-4 border-t border-line pt-4">
+      <h4 className="text-2xs font-semibold uppercase tracking-wider text-ink-3">Customer repayment preview</h4>
+      <p className="mt-1 text-xs text-ink-3">
+        Estimated from today; final due dates are set on disbursement. After payout, customers get push reminders{" "}
+        <strong>3 days before</strong>, <strong>on the due date</strong>, and if overdue (daily job ~08:00 Lagos).
+      </p>
+      <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+        <div>
+          <dt className="text-ink-3">Total to repay</dt>
+          <dd className="num font-semibold text-ink">{money(o.total_repayable)}</dd>
+        </div>
+        <div>
+          <dt className="text-ink-3">
+            {o.installments} payments
+          </dt>
+          <dd className="num font-semibold text-ink">{money(o.first_payment)} each (1st)</dd>
+        </div>
+      </dl>
+      <ul className="mt-3 max-h-48 overflow-y-auto rounded-lg border border-line text-sm">
+        {shown.map((line) => (
+          <li key={line.installment} className="flex justify-between gap-2 border-b border-line/70 px-3 py-2 last:border-0">
+            <span className="text-ink-3">
+              {line.installment}. {date(line.due_date)}
+            </span>
+            <span className="num font-medium text-ink">{money(line.amount)}</span>
+          </li>
+        ))}
+      </ul>
+      {o.schedule.length > shown.length ? (
+        <p className="mt-1 text-xs text-ink-3">+ {o.schedule.length - shown.length} more installments</p>
+      ) : null}
+    </div>
+  );
+}
+
 function TermsCard({ application, onChanged }: { application: ApplicationDetail; onChanged: () => void }) {
   const { can } = useStaffAuth();
   const [amount, setAmount] = useState(application.approved_amount ?? application.requested_amount ?? "");
@@ -350,7 +438,10 @@ function TermsCard({ application, onChanged }: { application: ApplicationDetail;
 
   return (
     <Card>
-      <CardHeader title="Loan terms" description="Confirm amount and tenure before disbursing. Changes are audited." />
+      <CardHeader
+        title="Loan terms"
+        description="Confirm amount and tenure before credit approval / customer offer. Schedule and totals update automatically."
+      />
       <form onSubmit={submit} className="space-y-3">
         <Field label="Approved amount (₦)">
           {(id) => (
@@ -392,6 +483,8 @@ function TermsCard({ application, onChanged }: { application: ApplicationDetail;
           </div>
         </div>
       </form>
+
+      <OfferSchedulePreview applicationId={application.id} amount={String(amount)} tenure={tenure} cadence={cadence} />
 
       <Modal
         isOpen={rejectOpen}

@@ -14,7 +14,7 @@ transfers already sent to the bank, would have lost the record of them.
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
@@ -106,6 +106,16 @@ async def _settle_outbound(db: AsyncSession, rail, tx: PaymentTransaction) -> bo
         succeeded = transfer.status == TRANSFER_STATUS_SUCCESS
         failed = transfer.status in ("failed", "reversed")
         reason = f"Paystack transfer {transfer.status}"
+    elif provider == "stanbic":
+        # The status query needs the original transfer's details and date.
+        from app.integrations.stanbic.portal_sandbox import portal_tran_date
+
+        created = tx.created_at if tx.created_at.tzinfo else tx.created_at.replace(tzinfo=timezone.utc)
+        context = {**(tx.raw_payload or {}), "_tran_date": portal_tran_date(created)}
+        transfer = await rail.verify_disbursement(tx.provider_reference, nps_context=context)
+        succeeded = rail.is_disbursement_success(transfer.status)
+        failed = rail.is_disbursement_failed(transfer.status)
+        reason = transfer.narration or f"Transfer {transfer.status}"
     else:
         transfer = await rail.verify_disbursement(tx.provider_reference)
         succeeded = rail.is_disbursement_success(transfer.status)

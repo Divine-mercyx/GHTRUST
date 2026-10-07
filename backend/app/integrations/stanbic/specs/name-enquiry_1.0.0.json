@@ -1,0 +1,202 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "Name Enquiry",
+        "version": "1.0.0",
+        "description": "Fetch the name and some specific details of an account number. \n\nCould be used to verify an account(s) before a credit transaction is initiated.",
+        "contact": {
+            "name": "Integration APIs Team",
+            "email": "integrationsapis@stanbicibtc.com"
+        }
+    },
+    "basePath": "/test/sandbox/nameenquiry",
+    "paths": {
+        "/nameenquiry": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/00"
+                    },
+                    "401": {
+                        "$ref": "#/responses/99"
+                    },
+                    "500": {
+                        "$ref": "#/responses/55"
+                    }
+                },
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "name": "enquiry",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/nameEnquirySchema"
+                        }
+                    }
+                ],
+                "summary": "This endpoint fetches the name & some specific details of an account number.",
+                "description": "This endpoint fetches the name & some specific details of an account number."
+            }
+        }
+    },
+    "securityDefinitions": {
+        "clientID": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "Client-Id"
+        },
+        "clientSecret": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "Client-Secret"
+        }
+    },
+    "security": [
+        {
+            "clientID": [],
+            "clientSecret": []
+        }
+    ],
+    "schemes": [
+        "https"
+    ],
+    "host": "testapi.stanbicibtc.com",
+    "definitions": {
+        "nameEnquirySchema": {
+            "type": "object",
+            "properties": {
+                "accountNumber": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 10,
+                    "enum": [
+                        "0075645678"
+                    ]
+                },
+                "bankCode": {
+                    "type": "string",
+                    "enum": [
+                        "999221"
+                    ]
+                }
+            },
+            "description": "This is the schema for nameEnquirySchema."
+        },
+        "nameEnquirySchemaOut": {
+            "type": "object",
+            "properties": {
+                "accountNumber": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 10,
+                    "enum": [
+                        "0075645678"
+                    ]
+                },
+                "bankCode": {
+                    "type": "string",
+                    "enum": [
+                        "999000"
+                    ]
+                },
+                "channelCode": {
+                    "type": "integer",
+                    "enum": [
+                        6
+                    ]
+                }
+            },
+            "description": "This is the schema for nameEnquirySchemaOut."
+        },
+        "lookUpByClientInformation": {
+            "type": "object",
+            "properties": {
+                "clientId": {
+                    "type": "string"
+                },
+                "chargeId": {
+                    "type": "string",
+                    "enum": [
+                        "1"
+                    ]
+                }
+            },
+            "description": "This is the schema for lookUpByClientInformation."
+        }
+    },
+    "produces": [
+        "application/json"
+    ],
+    "consumes": [
+        "application/json"
+    ],
+    "responses": {
+        "55": {
+            "description": "Service Currently Unavailable",
+            "schema": {
+                "example": {
+                    "responsecode": "55",
+                    "responseMsg": "Service Currently Unavailable"
+                }
+            }
+        },
+        "99": {
+            "description": "Invalid Data Error",
+            "schema": {
+                "example": {
+                    "responseCode": "99",
+                    "responseMsg": "INVALID ACCOUNT NUMBER",
+                    "channelCode": 0
+                }
+            }
+        },
+        "00": {
+            "description": "Successful",
+            "schema": {
+                "example": {
+                    "accountNumber": "*******",
+                    "bankCode": "999221",
+                    "accountName": "*******",
+                    "bvn": "*******",
+                    "accountTier": "*******",
+                    "responseCode": "00",
+                    "responseMsg": "Successful",
+                    "channelCode": 6,
+                    "currency": "******"
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "REST",
+            "description": "This API is a RESTful API"
+        },
+        {
+            "name": "Customer Enquiry",
+            "description": "This API is used for retrieving or validating customer-related information."
+        },
+        {
+            "name": "Identity Verification",
+            "description": "This API is used for verifying or validating personal or business identity information, e.g name."
+        },
+        {
+            "name": "Validation",
+            "description": "This API validates customer or business names against authoritative sources."
+        },
+        {
+            "name": "PII",
+            "description": "This API processes personally identifiable information (e.g., individual names) that must be secured."
+        },
+        {
+            "name": "Stable",
+            "description": "This API is production-ready, versioned, and suitable for long-term use."
+        }
+    ]
+}

@@ -3,20 +3,30 @@ Stanbic IBTC bank-partner API constants.
 
 Developer portal: https://developer.stanbicibtc.com/sandbox/
 
-IMPORTANT — UNCONFIRMED CONTRACT
-The public Stanbic developer portal exposes only an "Investment Public Offer
-Webhook" and a "Bank-Test" product. The account-provisioning, NIP transfer and
-name-enquiry APIs GH Trust needs are behind plan subscription + API
-administrator approval (partner onboarding / NDA).
+Developer portal sandbox OpenAPI files are vendored in ``specs/``. When
+``STANBIC_PORTAL_SANDBOX=true``, NPS and name enquiry use those paths with
+``Client-Id`` / ``Client-Secret``.
 
-Every path and field name marked ``TODO(stanbic-spec)`` below is derived from
-docs/bank-partner-wallet-api-requirements.html (sections B, C, D, E) and MUST be
-reconciled against the sandbox OpenAPI spec once Stanbic grants access. The
-adapter shape is stable; only the wire names should change.
+Legacy ``PATH_CREATE_ACCOUNT`` / collections paths remain placeholders until a
+**collection / virtual account** product is confirmed — Account Opening and
+Current Account Opening create **CASA** accounts, not wallet collection VAs.
 """
 
-# ── Endpoint paths ──────────────────────────────────────────────────────────
-# TODO(stanbic-spec): confirm all paths against the sandbox OpenAPI document.
+# ── Developer portal sandbox (OpenAPI in specs/) ────────────────────────────
+PATH_ACCOUNT_OPENING_CREATE = "/create"
+PATH_ACCOUNT_OPENING_STATUS = "/account-opening-status"
+PATH_CURRENT_ACCOUNT_OPENING = "/"
+PATH_NPS_NAME_ENQUIRY = "/nameenquiry"
+PATH_NPS_SINGLE_TRANSFER = "/single-transfer"
+PATH_NPS_TRANSFER_STATUS = "/trans-status"
+PATH_TRANSACTION_HISTORY = "/transaction-history"
+PATH_CREDIT_OUTSTANDING_LOAN = "/outstanding-loan"
+PATH_CREDIT_CBN_CHECK = "/cbn-credit-check"
+PATH_CREDIT_PRIVATE_CHECK = "/private-credit-check"
+ACCOUNT_OPENING_SUCCESS_CODES = frozenset({"00"})
+ACCOUNT_OPENING_STATUS_SUCCESS = "00"
+
+# ── Legacy / partner contract (unconfirmed — use when not on portal sandbox) ─
 PATH_TOKEN = "/oauth2/token"
 PATH_CREATE_ACCOUNT = "/accounts/v1/virtual-accounts"           # req B1
 PATH_GET_ACCOUNT = "/accounts/v1/virtual-accounts/{reference}"  # req B2

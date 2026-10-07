@@ -312,6 +312,9 @@ class WalletService:
                 withdrawal.transfer_code = result.transaction_id
                 payment_tx.provider_transaction_id = result.transaction_id or withdrawal.transfer_reference
                 payment_tx.raw_payload = {"status": result.status, "reference": result.reference}
+                if isinstance(result.raw, dict) and "_nps_status_payload" in result.raw:
+                    # Stanbic NPS status checks need the original transfer details.
+                    payment_tx.raw_payload["_nps_status_payload"] = result.raw["_nps_status_payload"]
         except PaymentRailError as exc:
             if exc.outcome_unknown:
                 logger.warning(

@@ -1167,6 +1167,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/loans/applications/{application_id}/offer-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Repayment schedule the customer would see (estimated from today)
+         * @description Same math as the mobile offer; optional query params preview unsaved term edits.
+         */
+        get: operations["admin_offer_preview_api_v1_admin_loans_applications__application_id__offer_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/loans/applications/{application_id}/stage-action": {
         parameters: {
             query?: never;
@@ -2204,6 +2224,23 @@ export interface paths {
         put?: never;
         /** Accept the loan offer (e-signature with the transaction PIN) */
         post: operations["accept_offer_api_v1_loans_me_applications__application_id__offer_accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/loans/me/applications/{application_id}/offer/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decline the loan offer (returns application to credit review) */
+        post: operations["reject_offer_api_v1_loans_me_applications__application_id__offer_reject_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7825,6 +7862,41 @@ export interface operations {
             };
         };
     };
+    admin_offer_preview_api_v1_admin_loans_applications__application_id__offer_preview_get: {
+        parameters: {
+            query?: {
+                approved_amount?: number | string | null;
+                tenure_months?: number | null;
+                repayment_cadence?: string | null;
+            };
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoanOfferResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     admin_stage_action_api_v1_admin_loans_applications__application_id__stage_action_post: {
         parameters: {
             query?: never;
@@ -9814,6 +9886,35 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["LoanOfferResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_offer_api_v1_loans_me_applications__application_id__offer_reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

@@ -1,0 +1,181 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "version": "1.0.0",
+        "title": "Account Opening Status",
+        "description": "The Account Opening Status API retrieves the status of an account opening request.",
+        "contact": {
+            "name": "Integration APIs Team",
+            "email": "Integrationsapis@stanbicibtc.com"
+        }
+    },
+    "servers": [
+        {
+            "url": "https://testapi.stanbicibtc.com/test/sandbox"
+        }
+    ],
+    "paths": {
+        "/account-opening-status": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "$ref": "#/components/responses/00"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/99"
+                    },
+                    "402": {
+                        "$ref": "#/components/responses/99"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/99"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "accountOpeningRefID",
+                        "in": "query",
+                        "required": true,
+                        "description": "Reference ID of the account opening request whose status is being queried.",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "ACCT-202532180230203"
+                    },
+                    {
+                        "name": "requestDate",
+                        "in": "query",
+                        "required": true,
+                        "description": "Date the account opening request was submitted, in DD-MON-YY format.",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "04-AUG-26"
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "ClientId": {
+                "type": "apiKey",
+                "name": "Client-Id",
+                "in": "header",
+                "description": "API key used to identify the calling client application. Must be passed in the Client-Id request header."
+            },
+            "ClientSecret": {
+                "type": "apiKey",
+                "name": "Client-Secret",
+                "in": "header",
+                "description": "Secret key paired with the Client-Id for authenticating the calling application. Must be passed in the Client-Secret request header."
+            }
+        },
+        "schemas": {
+            "SuccessResponseBody": {
+                "type": "object",
+                "properties": {
+                    "responseDetails": {
+                        "type": "object",
+                        "properties": {
+                            "cifId": {
+                                "type": "string",
+                                "example": "**********",
+                                "description": "(PII - masked)"
+                            },
+                            "isExistingCif": {
+                                "type": "boolean",
+                                "example": false
+                            },
+                            "statusMessage": {
+                                "type": "string",
+                                "example": "Account number ********** successfully created",
+                                "description": "(PII - masked)"
+                            },
+                            "account": {
+                                "type": "string",
+                                "example": "**********",
+                                "description": "(PII - masked)"
+                            },
+                            "accountOpeningRefId": {
+                                "type": "string",
+                                "example": "ACCT-20260604154602154"
+                            }
+                        }
+                    },
+                    "rbxResponseCode": {
+                        "type": "string",
+                        "example": "00"
+                    },
+                    "rbxResponseMsg": {
+                        "type": "string",
+                        "example": "Account Creation is Successful"
+                    }
+                }
+            },
+            "FailureResponseBody": {
+                "type": "object",
+                "properties": {
+                    "rbxResponseCode": {
+                        "type": "string",
+                        "example": "99"
+                    },
+                    "rbxResponseMsg": {
+                        "type": "string",
+                        "example": "FAILURE"
+                    },
+                    "responseDesc": {
+                        "type": "string",
+                        "example": "No account opening record found for the supplied accountOpeningRefID"
+                    }
+                }
+            }
+        },
+        "responses": {
+            "99": {
+                "description": "Failure",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/FailureResponseBody"
+                        }
+                    }
+                }
+            },
+            "00": {
+                "description": "Success",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/SuccessResponseBody"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "REST",
+            "description": "This API is a RESTFUL API"
+        },
+        {
+            "name": "Account Opening Status",
+            "description": "Specifically responsible for retrieving the status of a current (checking) account opening request submitted to Redbox."
+        },
+        {
+            "name": "Customer Onboarding",
+            "description": "Facilitates the onboarding of new customers, including identity capture, validation, and account provisioning."
+        },
+        {
+            "name": "Accounts",
+            "description": "Related to the creation, management, and lifecycle of current (checking) accounts."
+        }
+    ],
+    "security": [
+        {
+            "ClientId": [],
+            "ClientSecret": []
+        }
+    ]
+}

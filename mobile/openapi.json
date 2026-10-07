@@ -3187,6 +3187,108 @@
     }
    }
   },
+  "/api/v1/admin/loans/applications/{application_id}/offer-preview": {
+   "get": {
+    "tags": [
+     "Admin \u2014 Loans"
+    ],
+    "summary": "Repayment schedule the customer would see (estimated from today)",
+    "description": "Same math as the mobile offer; optional query params preview unsaved term edits.",
+    "operationId": "admin_offer_preview_api_v1_admin_loans_applications__application_id__offer_preview_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "application_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Application Id"
+      }
+     },
+     {
+      "name": "approved_amount",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number",
+         "exclusiveMinimum": 0.0
+        },
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Approved Amount"
+      }
+     },
+     {
+      "name": "tenure_months",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 60,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tenure Months"
+      }
+     },
+     {
+      "name": "repayment_cadence",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Repayment Cadence"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LoanOfferResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/admin/loans/applications/{application_id}/stage-action": {
    "post": {
     "tags": [
@@ -6430,6 +6532,46 @@
         }
        }
       }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/loans/me/applications/{application_id}/offer/reject": {
+   "post": {
+    "tags": [
+     "Legal"
+    ],
+    "summary": "Decline the loan offer (returns application to credit review)",
+    "operationId": "reject_offer_api_v1_loans_me_applications__application_id__offer_reject_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "application_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Application Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
      },
      "422": {
       "description": "Validation Error",

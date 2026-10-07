@@ -43,6 +43,7 @@ from app.integrations.payments.schemas import (
     TransientRailError,
     WalletBalanceResult,
 )
+from app.integrations.stanbic import portal_sandbox as stanbic_portal
 from app.integrations.stanbic.constants import (
     ACCOUNT_STATUS_ACTIVE,
     PATH_BANKS,
@@ -103,6 +104,10 @@ class StanbicClient:
     @property
     def _use_mock(self) -> bool:
         return settings.stanbic_mock or not settings.stanbic_enabled
+
+    @property
+    def _use_portal_sandbox(self) -> bool:
+        return settings.stanbic_portal_sandbox and not self._use_mock
 
     @property
     def _uses_oauth(self) -> bool:
@@ -374,11 +379,15 @@ class StanbicClient:
                 bank_code=bank_code,
             )
 
-        body = await self._request(
-            "POST",
-            PATH_NAME_ENQUIRY,
-            json={"accountNumber": account_number, "bankCode": bank_code},
-        )
+        if self._use_portal_sandbox:
+            # Portal NIP codes are often 999xxx; pass through the code the app collected.
+            body = await stanbic_portal.name_enquiry(account_number, bank_code)
+        else:
+            body = await self._request(
+                "POST",
+                PATH_NAME_ENQUIRY,
+                json={"accountNumber": account_number, "bankCode": bank_code},
+            )
         account_name = str(body.get("accountName") or "")
         if not account_name:
             raise PaymentRailError("Stanbic name enquiry returned no account name", status_code=502)
@@ -412,9 +421,43 @@ class StanbicClient:
                 raw={"mock": True},
             )
 
-        # TODO(stanbic-spec): confirm amount units. Requirements doc specifies
-        # NGN to 2 decimal places (not kobo) — verify before go-live.
-        payload: dict[str, Any] = {
+        if not self.settlement_account_number:
+            raise PaymentRailError(
+                "STANBIC_SETTLEMENT_ACCOUNT_NUMBER is required for NPS transfers", status_code=503
+            )
+
+        if self._use_portal_sandbox:
+            payload = {
+                "clientRefId": reference[:32],
+                "srcAcctName": "GH Trust MFB",
+                "srcAcctNum": self.settlement_account_number,
+                "transAmount": str(amount),
+                "srcAcctNarration": narration[:30],
+                "destAcctName": account_name,
+                "destAcctNum": account_number,
+                "destAcctNarration": narration[:30],
+                "destinationAccountBankCode": bank_code,
+            }
+            body = await stanbic_portal.single_transfer(payload)
+            status = stanbic_portal.map_nps_transfer_status(body)
+            return DisbursementResult(
+                reference=reference,
+                status=status,
+                amount=amount,
+                currency=currency,
+                transaction_id=str(body.get("bankRefId") or "") or None,
+                narration=narration,
+                raw={**body, "_nps_status_payload": {
+                    "clientRefId": payload["clientRefId"],
+                    "srcAcctNum": payload["srcAcctNum"],
+                    "destAcctNum": account_number,
+                    "amount": str(amount),
+                    "destBankCode": bank_code,
+                    "tranDate": stanbic_portal.portal_tran_date(),
+                }},
+            )
+
+        payload = {
             "reference": reference,
             "amount": str(amount),
             "currency": currency,
@@ -422,9 +465,8 @@ class StanbicClient:
             "accountNumber": account_number,
             "accountName": account_name,
             "narration": narration,
+            "sourceAccountNumber": self.settlement_account_number,
         }
-        if self.settlement_account_number:
-            payload["sourceAccountNumber"] = self.settlement_account_number
         if self.merchant_id:
             payload["merchantId"] = self.merchant_id
 
@@ -441,7 +483,7 @@ class StanbicClient:
 
     # ── D4: outbound transfer status ────────────────────────────────────────
 
-    async def verify_disbursement(self, reference: str) -> DisbursementResult:
+    async def verify_disbursement(self, reference: str, *, nps_context: dict[str, Any] | None = None) -> DisbursementResult:
         if self._use_mock:
             return DisbursementResult(
                 reference=reference,
@@ -450,9 +492,28 @@ class StanbicClient:
                 raw={"mock": True},
             )
 
-        body = await self._request(
-            "GET", PATH_TRANSFER_STATUS.format(reference=reference)
-        )
+        if self._use_portal_sandbox:
+            ctx = nps_context or {}
+            status_payload = ctx.get("_nps_status_payload") if isinstance(ctx.get("_nps_status_payload"), dict) else {}
+            if not status_payload:
+                status_payload = {
+                    "clientRefId": reference[:32],
+                    "srcAcctNum": self.settlement_account_number or "",
+                    # The day the transfer was sent, not today (reconciliation runs later).
+                    "tranDate": ctx.get("_tran_date") or stanbic_portal.portal_tran_date(),
+                }
+            body = await stanbic_portal.transfer_status(status_payload)
+            status = stanbic_portal.map_nps_transfer_status(body)
+            return DisbursementResult(
+                reference=reference,
+                status=status,
+                amount=self._decimal_amount(body.get("amount")),
+                currency="NGN",
+                transaction_id=str(body.get("bankRefid") or body.get("bankRefId") or "") or None,
+                raw=body,
+            )
+
+        body = await self._request("GET", PATH_TRANSFER_STATUS.format(reference=reference))
         return DisbursementResult(
             reference=str(body.get("reference") or reference),
             status=str(body.get("status") or "").upper(),

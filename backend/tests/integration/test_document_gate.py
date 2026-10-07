@@ -1,6 +1,7 @@
 """Loans cannot be finally approved or paid out until every required document is verified."""
 
 from tests.integration.test_disbursement_lifecycle import (
+    accept_loan_offer,
     approved_application,
     disburse,
     submitted_application,
@@ -21,7 +22,13 @@ async def test_final_approval_blocked_until_documents_verified(
 ):
     app_id = await submitted_application(api_client, db_session)
 
-    for _ in range(3):  # earlier stages are not gated
+    # Earlier stages are not gated; the credit stage sends the offer, which the customer accepts.
+    for _ in range(3):
+        status = (
+            await api_client.get(f"/api/v1/admin/loans/applications/{app_id}", headers=admin_headers)
+        ).json()["status"]
+        if status == "offer_sent":
+            await accept_loan_offer(api_client, app_id)
         assert (await _approve(api_client, app_id, admin_headers)).status_code == 200
 
     blocked = await _approve(api_client, app_id, admin_headers)

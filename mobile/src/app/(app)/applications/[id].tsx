@@ -39,7 +39,8 @@ export default function ApplicationDetail() {
   const s = applicationStatus(a.status);
   const loan = loansQuery.data?.items.find((l) => l.application_id === a.id);
   const needsDocs = a.status === 'documents_incomplete' || a.documents.some((d) => d.status === 'rejected');
-  const offerWaiting = a.status === 'approved' && !a.offer_accepted_at;
+  const offerWaiting =
+    (a.status === 'offer_sent' || (a.status === 'approved' && !a.offer_accepted_at));
   const amount = a.approved_amount ?? a.requested_amount;
   const tenure = a.tenure_months;
 
@@ -92,9 +93,10 @@ export default function ApplicationDetail() {
         </Card>
       ) : offerWaiting ? (
         <Card style={{ gap: space.xs, borderWidth: 1.5, borderColor: colors.cyan }}>
-          <Text variant="heading">Your loan is approved</Text>
+          <Text variant="heading">{a.status === 'offer_sent' ? 'Your offer is ready' : 'Your loan is approved'}</Text>
           <Text variant="small" muted>
-            Review the offer: the amount, interest, fees and every payment date. We pay it out as soon as you accept.
+            Review the offer: the amount, interest, fees and every payment date. Accept to continue, or decline if
+            the terms don't work for you.
           </Text>
           <Button
             title="Review offer"

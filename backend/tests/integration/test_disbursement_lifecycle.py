@@ -133,18 +133,42 @@ async def complete_draft(api_client, db_session, form=UNIVERSAL_FORM, tenure=6) 
 async def approved_application(
     api_client, db_session, admin_headers, form=UNIVERSAL_FORM, tenure=6, accept_offer=True
 ) -> str:
-    """Approved by staff and (by default) the offer accepted by the customer, ready to pay out."""
+    """
+    Approved by staff with the offer accepted by the customer, ready to pay out.
+
+    The credit stage sends the offer and the workflow waits for the customer. With
+    accept_offer=False this stops there (status offer_sent); finish_approval continues.
+    """
     app_id = await submitted_application(api_client, db_session, form=form, tenure=tenure)
     await verify_all_documents(api_client, app_id, admin_headers)
-    for _ in range(4):  # business loan: 4 stages; super admin may act on all
+    return await finish_approval(api_client, app_id, admin_headers, accept_offer=accept_offer)
+
+
+async def finish_approval(api_client, app_id: str, admin_headers, *, accept_offer: bool = True) -> str:
+    """Approve the remaining stages, accepting the offer when the workflow waits for it."""
+    for _ in range(10):
+        status = (
+            await api_client.get(f"/api/v1/admin/loans/applications/{app_id}", headers=admin_headers)
+        ).json()["status"]
+        if status == "approved":
+            break
+        if status == "offer_sent":
+            if not accept_offer:
+                return app_id
+            await accept_loan_offer(api_client, app_id)
+            continue
         res = await api_client.post(
             f"/api/v1/admin/loans/applications/{app_id}/stage-action",
             json={"action": "approved", "note": "ok"},
             headers=admin_headers,
         )
         assert res.status_code == 200, res.text
-    assert res.json()["status"] == "approved"
-    if accept_offer:
+    else:
+        raise AssertionError("workflow did not reach approved")
+    final = (
+        await api_client.get(f"/api/v1/admin/loans/applications/{app_id}", headers=admin_headers)
+    ).json()
+    if accept_offer and not final.get("offer_accepted_at"):
         await accept_loan_offer(api_client, app_id)
     return app_id
 
@@ -405,13 +429,22 @@ class TestRailOutcomes:
         assert application.status == ApplicationStatus.APPROVED
 
     async def test_disbursement_requires_tenure(self, api_client, db_session, admin_headers):
+        """No offer (and so no payout) until staff set the tenure: the credit stage refuses."""
         form = {**UNIVERSAL_FORM, "repayment_period": "as agreed"}
-        app_id = await approved_application(
-            api_client, db_session, admin_headers, form=form, tenure=None, accept_offer=False
-        )
-        res = await disburse(api_client, app_id, admin_headers)
-        assert res.status_code == 409
-        assert "tenure" in res.json()["detail"].lower()
+        app_id = await submitted_application(api_client, db_session, form=form, tenure=None)
+        await verify_all_documents(api_client, app_id, admin_headers)
+        refused = None
+        for _ in range(4):
+            res = await api_client.post(
+                f"/api/v1/admin/loans/applications/{app_id}/stage-action",
+                json={"action": "approved", "note": "ok"},
+                headers=admin_headers,
+            )
+            if res.status_code != 200:
+                refused = res
+                break
+        assert refused is not None and refused.status_code == 409
+        assert "tenure" in refused.json()["detail"].lower()
 
         # Staff confirm terms, the customer accepts the offer, then it disburses.
         await api_client.patch(
@@ -419,7 +452,7 @@ class TestRailOutcomes:
             json={"tenure_months": 3},
             headers=admin_headers,
         )
-        await accept_loan_offer(api_client, app_id)
+        await finish_approval(api_client, app_id, admin_headers)
         assert (await disburse(api_client, app_id, admin_headers)).status_code == 200
 
 

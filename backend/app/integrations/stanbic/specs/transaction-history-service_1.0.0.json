@@ -1,0 +1,286 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "version": "1.0.0",
+        "title": "Transaction History Service",
+        "description": "This API fetches the history of transactions for an account within a specified date range",
+        "contact": {
+            "name": "Integration APIs Team",
+            "email": "Integrationsapis@stanbicibtc.com"
+        }
+    },
+    "servers": [
+        {
+            "url": "https://testapi.stanbicibtc.com/test/sandbox/transaction-history-service"
+        }
+    ],
+    "paths": {
+        "/transaction-history": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Successsful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "title": "response",
+                                    "type": "object",
+                                    "example": {
+                                        "accountStatement": {
+                                            "content": [
+                                                {
+                                                    "pstdUserId": "*******",
+                                                    "itemId": "25-SEP-25     0171   1",
+                                                    "debitAccountName": "***** ***** *****",
+                                                    "debitAccountNumber": "**********",
+                                                    "transParticular": "TESTING",
+                                                    "tranDate": "2025-09-25 00:00:00",
+                                                    "tranTime": "2025-09-25 16:27:20",
+                                                    "postingDate": "2025-09-25 16:27:20",
+                                                    "valueDate": "2025-09-25 00:00:00",
+                                                    "description1": "TESTING",
+                                                    "description2": "dummy description",
+                                                    "description3": "dummy description",
+                                                    "amt": "500",
+                                                    "transactionType": "D",
+                                                    "tranId": "     0171",
+                                                    "partTranSerialNum": "  1",
+                                                    "currency": "NGN"
+                                                }
+                                            ],
+                                            "pageNumber": 1,
+                                            "size": 100,
+                                            "totalRecords": 2,
+                                            "totalPages": 1
+                                        },
+                                        "responseCode": "00",
+                                        "responseMsg": "Successful"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "title": "response",
+                                    "type": "object",
+                                    "example": {
+                                        "httpCode": "401",
+                                        "httpMessage": "Unauthorized",
+                                        "moreInformation": "Invalid client id or secret."
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Service unavailable",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "title": "response",
+                                    "type": "object",
+                                    "example": {
+                                        "responsecode": "55",
+                                        "responseMsg": "Service Currently Unavailable"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "summary": "This API fetches the history of transactions for an account within a specified range",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RequestBody"
+                            }
+                        }
+                    },
+                    "required": true,
+                    "description": "This request takes in the account number and date range"
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "clientID": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "Client-Id"
+            },
+            "clientSecret": {
+                "type": "apiKey",
+                "name": "Client-Secret",
+                "in": "header"
+            }
+        },
+        "schemas": {
+            "RequestBody": {
+                "type": "object",
+                "properties": {
+                    "accountNumber": {
+                        "type": "string",
+                        "description": "Account number"
+                    },
+                    "startDate": {
+                        "type": "string",
+                        "description": "Start date of date range",
+                        "enum": [
+                            "2025-01-25"
+                        ]
+                    },
+                    "endDate": {
+                        "type": "string",
+                        "description": "End date of date range",
+                        "enum": [
+                            "2025-09-25"
+                        ]
+                    }
+                },
+                "required": [
+                    "accountNumber",
+                    "startDate",
+                    "endDate"
+                ]
+            },
+            "ResponseBody": {
+                "type": "object",
+                "example": {
+                    "accountStatement": {
+                        "content": [
+                            {
+                                "pstdUserId": "*******",
+                                "itemId": "25-SEP-25     0171   1",
+                                "debitAccountName": "***** ***** *****",
+                                "debitAccountNumber": "**********",
+                                "transParticular": "TESTING",
+                                "tranDate": "2025-09-25 00:00:00",
+                                "tranTime": "2025-09-25 16:27:20",
+                                "postingDate": "2025-09-25 16:27:20",
+                                "valueDate": "2025-09-25 00:00:00",
+                                "description1": "TESTING",
+                                "description2": "dummy description",
+                                "description3": "dummy description",
+                                "amt": "500",
+                                "transactionType": "D",
+                                "tranId": "     0171",
+                                "partTranSerialNum": "  1",
+                                "currency": "NGN"
+                            }
+                        ],
+                        "pageNumber": 1,
+                        "size": 100,
+                        "totalRecords": 2,
+                        "totalPages": 1
+                    },
+                    "responseCode": "00",
+                    "responseMsg": "Successful"
+                }
+            }
+        },
+        "responses": {
+            "41": {
+                "description": "Unauthorized",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "title": "response",
+                            "type": "object",
+                            "example": {
+                                "httpCode": "401",
+                                "httpMessage": "Unauthorized",
+                                "moreInformation": "Invalid client id or secret."
+                            }
+                        }
+                    }
+                }
+            },
+            "55": {
+                "description": "Service Unavailable",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "title": "response",
+                            "type": "object",
+                            "example": {
+                                "responsecode": "55",
+                                "responseMsg": "Service Currently Unavailable"
+                            }
+                        }
+                    }
+                }
+            },
+            "99": {
+                "description": "Bad Request. Parameters sent in the request could not be validated, pls check the responseMsg that followed the response to know the exact error that occured"
+            },
+            "00": {
+                "description": "Request completed successfully",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "title": "response",
+                            "type": "object",
+                            "example": {
+                                "accountStatement": {
+                                    "content": [
+                                        {
+                                            "pstdUserId": "*******",
+                                            "itemId": "25-SEP-25     0171   1",
+                                            "debitAccountName": "***** ***** *****",
+                                            "debitAccountNumber": "**********",
+                                            "transParticular": "TESTING",
+                                            "tranDate": "2025-09-25 00:00:00",
+                                            "tranTime": "2025-09-25 16:27:20",
+                                            "postingDate": "2025-09-25 16:27:20",
+                                            "valueDate": "2025-09-25 00:00:00",
+                                            "description1": "TESTING",
+                                            "description2": "dummy description",
+                                            "description3": "dummy description",
+                                            "amt": "500",
+                                            "transactionType": "D",
+                                            "tranId": "     0171",
+                                            "partTranSerialNum": "  1",
+                                            "currency": "NGN"
+                                        }
+                                    ],
+                                    "pageNumber": 1,
+                                    "size": 100,
+                                    "totalRecords": 2,
+                                    "totalPages": 1
+                                },
+                                "responseCode": "00",
+                                "responseMsg": "Successful"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "security": [
+        {
+            "clientID": [],
+            "clientSecret": []
+        }
+    ],
+    "tags": [
+        {
+            "name": "REST",
+            "description": "This is a RESTful API"
+        },
+        {
+            "name": "Transaction data",
+            "description": "Credit and transfer records within a time range"
+        },
+        {
+            "name": "Financial records",
+            "description": "Records of money movement for reporting and reference"
+        }
+    ]
+}
