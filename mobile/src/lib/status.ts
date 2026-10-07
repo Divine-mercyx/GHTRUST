@@ -18,7 +18,11 @@ const APPLICATION: Record<ApplicationStatus, StatusCopy> = {
     hint: 'Some documents need attention. Check them and upload again.',
   },
   approved: { label: 'Approved', tone: 'success', hint: 'Your loan is approved. Review and accept your offer to get it paid out.' },
-  offer_sent: { label: 'Offer ready', tone: 'success', hint: 'Your loan offer is ready. Your branch will contact you.' },
+  offer_sent: {
+    label: 'Offer ready',
+    tone: 'success',
+    hint: 'Your loan offer is ready. Review the terms in the app and accept or decline.',
+  },
   offer_accepted: { label: 'Offer accepted', tone: 'success', hint: 'Your loan is being prepared for payout.' },
   product_gate_pending: { label: 'In review', tone: 'progress', hint: 'Final checks are in progress.' },
   processing_fee_paid: { label: 'Being prepared', tone: 'progress', hint: 'Your loan is being prepared for payout.' },

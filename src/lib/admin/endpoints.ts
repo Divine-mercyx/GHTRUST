@@ -5,6 +5,7 @@ import type {
   AdminSettings,
   OnboardingReport,
   ApplicationDetail,
+  LoanOfferPreview,
   ApplicationSummary,
   ApplicationWorkflowState,
   AuditLogEntry,
@@ -89,6 +90,10 @@ export const applicationsApi = {
   list: (params: { status?: string; product_code?: string; search?: string; limit?: number; offset?: number } = {}) =>
     apiWithTotal<ApplicationSummary[]>(`${V1}/admin/loans/applications${query(params)}`),
   get: (id: string) => api<ApplicationDetail>(`${V1}/admin/loans/applications/${id}`),
+  offerPreview: (
+    id: string,
+    params?: { approved_amount?: string; tenure_months?: number; repayment_cadence?: string },
+  ) => api<LoanOfferPreview>(`${V1}/admin/loans/applications/${id}/offer-preview${query(params ?? {})}`),
   workflow: (id: string) => api<ApplicationWorkflowState>(`${V1}/admin/loans/applications/${id}/workflow`),
   auditLog: (id: string) => api<AuditLogEntry[]>(`${V1}/admin/loans/applications/${id}/audit-log`),
   stageAction: (id: string, action: "approved" | "rejected", note?: string) =>

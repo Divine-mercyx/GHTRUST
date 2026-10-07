@@ -1,0 +1,237 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "Current-Account Opening",
+    "x-ibm-name": "current-account-opening",
+    "description": "The Account Opening API provides endpoints for onboarding new customers and creating financial accounts.",
+    "contact": {
+      "name": "Integration APIs Team",
+      "email": "Integrationsapis@stanbicibtc.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://testapi.stanbicibtc.com/test/sandbox/current-account-opening"
+    }
+  ],
+  "x-ibm-configuration": {
+    "cors": {
+      "enabled": true
+    },
+    "type": "rest",
+    "phase": "realized",
+    "enforced": true,
+    "testable": true,
+    "oauth-servers": {
+      "OAuth": {
+        "clientCredentials": {
+          "tokenUrls": [
+            "https://testapi.stanbicibtc.com/test/sandbox/mynativeoauthprovider/oauth2/token"
+          ],
+          "authorizationUrls": [],
+          "refreshUrls": []
+        }
+      }
+    }
+  },
+  "paths": {
+    "/": {
+      "post": {
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/00"
+          },
+          "400": {
+            "$ref": "#/components/responses/99"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestBody"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "OAuth": {
+        "type": "oauth2",
+        "x-ibm-oauth-provider": "mynativeoauthprovider",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "https://testapi.stanbicibtc.com/test/sandbox/mynativeoauthprovider/oauth2/token",
+            "scopes": {
+              "access": "Branch details"
+            }
+          }
+        },
+        "description": "OAuth 2.0 client credentials flow used to authorize API access. A bearer token must be obtained and passed with each request."
+      }
+    },
+    "schemas": {
+      "RequestBody": {
+        "type": "object",
+        "properties": {
+          "cifID": {
+            "type": "string",
+            "example": "********"
+          },
+          "custName": {
+            "type": "string",
+            "example": "TOYOSI"
+          },
+          "accountName": {
+            "type": "string",
+            "example": "TOYOSI"
+          },
+          "accountShortName": {
+            "type": "string",
+            "example": "TOYO"
+          },
+          "channelId": {
+            "type": "string",
+            "example": "RBX"
+          },
+          "schemeCode": {
+            "type": "string",
+            "example": "OD006"
+          },
+          "branchId": {
+            "type": "string",
+            "example": 999999
+          },
+          "acctManager": {
+            "type": "string",
+            "example": ""
+          },
+          "glSubheadCode": {
+            "type": "string",
+            "example": 3500
+          },
+          "currencyCode": {
+            "type": "string",
+            "example": "NGN"
+          }
+        }
+      },
+      "SuccessResponseBody": {
+        "type": "object",
+        "properties": {
+          "responseCode": {
+            "type": "string",
+            "example": 0
+          },
+          "responseMsg": {
+            "type": "string",
+            "example": "SUCCESS"
+          },
+          "responseDesc": {
+            "type": "string",
+            "example": "Account number 0123456789 successfully created"
+          },
+          "responseDetails": {
+            "type": "object",
+            "properties": {
+              "cifID": {
+                "type": "string",
+                "example": 111111111
+              },
+              "accountNumber": {
+                "type": "string",
+                "example": 123456789
+              }
+            }
+          }
+        }
+      },
+      "FailureResponseBody": {
+        "type": "object",
+        "properties": {
+          "responseCode": {
+            "type": "string",
+            "example": 99
+          },
+          "responseMsg": {
+            "type": "string",
+            "example": "FAILURE"
+          },
+          "responseDesc": {
+            "type": "string",
+            "example": "Error: Account Already Exist For the Scheme: Od006, Customer Id: 0123456789, Currency: NGN"
+          },
+          "responseDetails": {
+            "type": "object",
+            "properties": {
+              "cifID": {
+                "type": "string",
+                "example": 111111111
+              },
+              "accountNumber": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "99": {
+        "description": "Failure",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/FailureResponseBody"
+            }
+          }
+        }
+      },
+      "00": {
+        "description": "Success",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SuccessResponseBody"
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "REST",
+      "description": "This API is a RESTFUL API"
+    },
+    {
+      "name": "Current Account Opening",
+      "description": "Specifically responsible for onboarding and opening current (checking) customer accounts, including validation and initialization workflows."
+    },
+    {
+      "name": "Customer Onboarding",
+      "description": "Facilitates the onboarding of new customers, including identity capture, validation, and account provisioning."
+    },
+    {
+      "name": "Accounts",
+      "description": "Related to the creation, management, and lifecycle of current (checking) accounts."
+    }
+  ],
+  "security": [
+    {
+      "OAuth": [
+        "access"
+      ]
+    }
+  ],
+  "x-ibm-endpoints": [
+    {
+      "url": "https://testapi.stanbicibtc.com/test/sandbox/current-account-opening"
+    }
+  ]
+}

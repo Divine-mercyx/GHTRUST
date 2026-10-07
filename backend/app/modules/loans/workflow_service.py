@@ -26,6 +26,8 @@ from app.modules.loans.workflow_models import (
     LoanWorkflowStage,
     StageDecisionAction,
 )
+from app.modules.loans.servicing import validate_terms
+from app.modules.loans.workflow_offer_gate import is_credit_offer_gate_stage
 from app.modules.notifications import events as notify
 
 
@@ -220,6 +222,11 @@ class WorkflowService:
             )
         if application.status in (ApplicationStatus.REJECTED, ApplicationStatus.DISBURSED):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Application is already closed")
+        if application.status == ApplicationStatus.OFFER_SENT:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Waiting for the customer to accept or reject the loan offer",
+            )
 
         stage = await self._get_stage(application.current_stage_id)
         self._ensure_staff_can_approve(staff, stage)
@@ -265,6 +272,35 @@ class WorkflowService:
             ensure_documents_verified(application, action="final approval")
         stage_name = stage.name
         stage_id = stage.id
+
+        if is_credit_offer_gate_stage(stage):
+            amount = application.approved_amount or application.requested_amount
+            if amount is None or amount <= 0:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Set the approved loan amount before sending the offer to the customer",
+                )
+            validate_terms(application)
+            application.status = ApplicationStatus.OFFER_SENT
+            application.offer_sent_at = now
+            application.offer_gate_stage_id = stage.id
+            application.offer_resume_stage_id = next_stage.id if next_stage else None
+            await self.audit.log_staff(
+                application.id,
+                AuditEventType.STAGE_APPROVED,
+                staff,
+                message=f"Approved stage: {stage_name} — offer sent to customer",
+                metadata={
+                    "stage_id": stage_id,
+                    "stage_name": stage_name,
+                    "duration_seconds": duration,
+                    "offer_resume_stage_id": application.offer_resume_stage_id,
+                },
+                ip_address=ip,
+            )
+            await notify.offer_sent_to_customer(self.db, application)
+            return application
+
         if next_stage:
             application.current_stage_id = next_stage.id
             application.current_stage_entered_at = now
@@ -297,9 +333,74 @@ class WorkflowService:
                 metadata={"stage_id": stage_id, "stage_name": stage_name, "duration_seconds": duration},
                 ip_address=ip,
             )
-            await notify.application_approved(self.db, application)
+            if application.offer_accepted_at:
+                await notify.application_fully_approved(self.db, application)
+            else:
+                await notify.application_approved(self.db, application)
 
         return application
+
+    async def resume_after_customer_offer_accept(self, application: LoanApplication) -> None:
+        """Move the pipeline forward after the borrower accepts a post-credit offer."""
+        if application.status != ApplicationStatus.OFFER_SENT:
+            return
+        now = datetime.now(timezone.utc)
+        resume_id = application.offer_resume_stage_id
+        application.offer_gate_stage_id = None
+        application.offer_sent_at = None
+        application.offer_resume_stage_id = None
+
+        if not resume_id:
+            ensure_documents_verified(application, action="final approval")
+            application.status = ApplicationStatus.APPROVED
+            application.approved_at = now
+            application.current_stage_id = None
+            application.current_stage_entered_at = None
+            await self.audit.log_system(
+                application.id,
+                AuditEventType.STATUS_CHANGED,
+                message="Customer accepted offer — application fully approved",
+                metadata={"status": ApplicationStatus.APPROVED.value},
+            )
+            await notify.application_fully_approved(self.db, application)
+            return
+
+        resume_stage = await self._get_stage(resume_id)
+        application.status = ApplicationStatus.OFFER_ACCEPTED
+        application.current_stage_id = resume_stage.id
+        application.current_stage_entered_at = now
+        await self.audit.log_system(
+            application.id,
+            AuditEventType.STATUS_CHANGED,
+            message="Customer accepted offer — workflow resumed",
+            metadata={"status": ApplicationStatus.OFFER_ACCEPTED.value, "stage_id": resume_stage.id},
+        )
+        await self.audit.log_system(
+            application.id,
+            AuditEventType.STAGE_ENTERED,
+            message=f"Entered stage: {resume_stage.name}",
+            metadata={"stage_id": resume_stage.id, "stage_name": resume_stage.name},
+        )
+        application.status = ApplicationStatus.UNDER_REVIEW
+
+    async def resume_after_customer_offer_reject(self, application: LoanApplication) -> None:
+        """Return to credit review after the borrower declines the offer."""
+        if application.status != ApplicationStatus.OFFER_SENT:
+            return
+        application.offer_sent_at = None
+        application.offer_resume_stage_id = None
+        application.offer_accepted_at = None
+        application.offer_terms_hash = None
+        if application.offer_gate_stage_id:
+            application.current_stage_id = application.offer_gate_stage_id
+        application.offer_gate_stage_id = None
+        application.status = ApplicationStatus.UNDER_REVIEW
+        await self.audit.log_system(
+            application.id,
+            AuditEventType.STATUS_CHANGED,
+            message="Customer declined the loan offer",
+            metadata={"status": ApplicationStatus.UNDER_REVIEW.value},
+        )
 
     async def disburse_application(
         self,

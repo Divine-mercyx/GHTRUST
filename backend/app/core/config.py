@@ -150,6 +150,21 @@ class Settings(BaseSettings):
     # Stanbic IBTC bank partner (https://developer.stanbicibtc.com/sandbox/)
     # Contract unconfirmed — see app/integrations/stanbic/constants.py
     stanbic_base_url: str = "https://api.sandbox.stanbicibtc.com"
+    stanbic_account_opening_base_url: str = "https://testapi.stanbicibtc.com/test/sandbox/account-opening"
+    stanbic_account_opening_status_base_url: str = "https://testapi.stanbicibtc.com/test/sandbox"
+    stanbic_current_account_base_url: str = "https://testapi.stanbicibtc.com/test/sandbox/current-account-opening"
+    stanbic_nps_base_url: str = "https://testapi.stanbicibtc.com/test/sandbox/nps"
+    stanbic_name_enquiry_base_url: str = "https://testapi.stanbicibtc.com/test/sandbox/nameenquiry"
+    stanbic_transaction_history_base_url: str = (
+        "https://testapi.stanbicibtc.com/test/sandbox/transaction-history-service"
+    )
+    stanbic_credit_check_base_url: str = "https://testapi.stanbicibtc.com/test/sandbox/credit-check-services"
+    stanbic_oauth_token_url: str = (
+        "https://testapi.stanbicibtc.com/test/sandbox/mynativeoauthprovider/oauth2/token"
+    )
+    # Use NPS / name enquiry / txn history from the developer portal (Client-Id auth).
+    stanbic_portal_sandbox: bool = True
+    stanbic_credit_check_enabled: bool = False
     stanbic_token_url: str = ""  # set for OAuth2 client-credentials; blank = IBM key pair
     stanbic_client_id: str = ""
     stanbic_client_secret: str = ""

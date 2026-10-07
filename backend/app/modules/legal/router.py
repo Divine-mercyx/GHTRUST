@@ -162,3 +162,12 @@ async def accept_offer(
         customer, application_id, terms_hash=payload.terms_hash, meta=meta, device_id=await _device_id(db, request)
     )
     return _offer(offer)
+
+
+@router.post(
+    "/loans/me/applications/{application_id}/offer/reject",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Decline the loan offer (returns application to credit review)",
+)
+async def reject_offer(application_id: str, customer: CurrentCustomer, db: DbSession) -> None:
+    await LegalService(db).reject_offer(customer, application_id)

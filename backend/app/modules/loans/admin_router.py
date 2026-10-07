@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from fastapi.responses import FileResponse
 
@@ -30,6 +32,9 @@ from app.modules.loans.schemas import (
     LoanProductToggleRequest,
     VerifyDocumentRequest,
 )
+from app.core.errors import AppError
+from app.modules.legal.router import LoanOfferResponse, _offer
+from app.modules.legal.service import build_offer
 from app.modules.loans.service import LoanService
 from app.modules.loans.servicing import (
     LoanServicingService,
@@ -134,6 +139,35 @@ async def admin_get_application_audit_log(
 ):
     logs = await LoanService(db).list_audit_log(application_id)
     return [AuditLogResponse.model_validate(log) for log in logs]
+
+
+@router.get(
+    "/applications/{application_id}/offer-preview",
+    response_model=LoanOfferResponse,
+    summary="Repayment schedule the customer would see (estimated from today)",
+)
+async def admin_offer_preview(
+    application_id: str,
+    db: DbSession,
+    _: Staff = Depends(require_permission(LOAN_READ)),
+    approved_amount: Decimal | None = Query(default=None, gt=0),
+    tenure_months: int | None = Query(default=None, ge=1, le=60),
+    repayment_cadence: str | None = Query(default=None),
+):
+    """Same math as the mobile offer; optional query params preview unsaved term edits."""
+    application = await LoanService(db)._get_application(application_id)
+    if approved_amount is not None:
+        application.approved_amount = approved_amount
+    if tenure_months is not None:
+        application.approved_tenure_months = tenure_months
+    if repayment_cadence:
+        application.repayment_cadence = repayment_cadence
+    try:
+        return _offer(build_offer(application))
+    except AppError:
+        raise
+    except ValueError as exc:
+        raise AppError(status.HTTP_422_UNPROCESSABLE_ENTITY, "VALIDATION_ERROR", str(exc)) from exc
 
 
 @router.post("/applications/{application_id}/stage-action", response_model=LoanApplicationDetailResponse)

@@ -130,6 +130,26 @@ export interface DocumentChecklistItem {
   document_id: string | null;
 }
 
+export interface LoanOfferInstallment {
+  installment: number;
+  due_date: string;
+  amount: Money;
+}
+
+/** Same shape as the customer mobile offer (estimated dates from today). */
+export interface LoanOfferPreview {
+  principal: Money;
+  tenure_months: number;
+  cadence: string;
+  installments: number;
+  total_repayable: Money;
+  total_interest: Money;
+  processing_fee: Money;
+  total_cost_of_credit: Money;
+  first_payment: Money;
+  schedule: LoanOfferInstallment[];
+}
+
 export interface ApplicationDetail {
   id: string;
   customer_id: string;

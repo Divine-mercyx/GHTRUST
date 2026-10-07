@@ -154,7 +154,13 @@ class LegalService:
 
     async def offer_for_customer(self, application_id: str, customer_id: str) -> LoanOffer:
         application = await self._application(application_id, customer_id)
-        offerable = (ApplicationStatus.APPROVED, ApplicationStatus.READY_TO_DISBURSE, ApplicationStatus.DISBURSED)
+        offerable = (
+            ApplicationStatus.OFFER_SENT,
+            ApplicationStatus.OFFER_ACCEPTED,
+            ApplicationStatus.APPROVED,
+            ApplicationStatus.READY_TO_DISBURSE,
+            ApplicationStatus.DISBURSED,
+        )
         if application.status not in offerable:
             raise AppError(
                 status.HTTP_409_CONFLICT,
@@ -174,7 +180,8 @@ class LegalService:
     ) -> LoanOffer:
         """Accept the loan offer. The transaction PIN is checked by the caller first."""
         application = await self._application(application_id, customer.id)
-        if application.status != ApplicationStatus.APPROVED:
+        acceptable = (ApplicationStatus.OFFER_SENT, ApplicationStatus.APPROVED)
+        if application.status not in acceptable:
             raise AppError(
                 status.HTTP_409_CONFLICT,
                 ErrorCode.OFFER_NOT_AVAILABLE,
@@ -182,6 +189,11 @@ class LegalService:
             )
         offer = build_offer(application)
         if application.offer_accepted_at and application.offer_terms_hash == offer.terms_hash:
+            if application.status == ApplicationStatus.OFFER_SENT:
+                from app.modules.loans.workflow_service import WorkflowService
+
+                await WorkflowService(self.db).resume_after_customer_offer_accept(application)
+                await self.db.flush()
             return offer  # accepting twice (a retry) is fine
         if terms_hash != offer.terms_hash:
             raise AppError(
@@ -203,8 +215,26 @@ class LegalService:
             terms_hash=offer.terms_hash,
         )
         await self.db.flush()
+        if application.status == ApplicationStatus.OFFER_SENT:
+            from app.modules.loans.workflow_service import WorkflowService
+
+            await WorkflowService(self.db).resume_after_customer_offer_accept(application)
+            await self.db.flush()
         offer.accepted_at = now
         return offer
+
+    async def reject_offer(self, customer: Customer, application_id: str) -> None:
+        application = await self._application(application_id, customer.id)
+        if application.status != ApplicationStatus.OFFER_SENT:
+            raise AppError(
+                status.HTTP_409_CONFLICT,
+                ErrorCode.OFFER_NOT_AVAILABLE,
+                "There's no offer waiting for your decision. Pull down to refresh.",
+            )
+        from app.modules.loans.workflow_service import WorkflowService
+
+        await WorkflowService(self.db).resume_after_customer_offer_reject(application)
+        await self.db.flush()
 
 
 def offer_terms_hash(application: LoanApplication) -> str:

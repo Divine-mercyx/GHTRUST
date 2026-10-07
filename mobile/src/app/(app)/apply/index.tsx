@@ -15,7 +15,7 @@ import { maxTenureMonths } from '@/features/apply/config';
 import { eligibilityLines } from '@/lib/eligibility';
 import { keys, useApplications, useProducts } from '@/lib/queries';
 import { CADENCE } from '@/lib/status';
-import { colors, font, radius, space } from '@/theme/tokens';
+import { colors, font, radius, shadow, space } from '@/theme/tokens';
 
 const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   business_loan: 'storefront-outline',
@@ -49,7 +49,10 @@ export default function ChooseProduct() {
 
   return (
     <Screen edges={['bottom']}>
-      <Text muted>Choose the loan that fits. You can save your application and finish it later.</Text>
+      <Text variant="small" muted style={{ marginBottom: space.xs }}>
+        Choose the loan that fits. You can save and finish later — same flow as leading finance apps, with clear
+        rates up front.
+      </Text>
       {create.error ? <Banner message={messageFor(create.error)} /> : null}
       {products.isPending ? (
         <>
@@ -72,7 +75,11 @@ export default function ChooseProduct() {
           const busy = create.isPending && create.variables === p.code;
           return (
             <Animated.View key={p.code} entering={FadeInDown.delay(i * 60).duration(300)}>
-              <Card onPress={create.isPending ? undefined : () => choose(p)} accessibilityLabel={`${p.name}. ${p.description ?? ''}`}>
+              <Card
+                style={styles.productCard}
+                onPress={create.isPending ? undefined : () => choose(p)}
+                accessibilityLabel={`${p.name}. ${p.description ?? ''}`}>
+                <View style={styles.accent} />
                 <View style={styles.row}>
                   <View style={styles.icon}>
                     <Ionicons name={ICONS[p.code] ?? 'cash-outline'} size={24} color={colors.navy} />
@@ -88,7 +95,7 @@ export default function ChooseProduct() {
                   {busy ? <ActivityIndicator color={colors.navy} /> : <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />}
                 </View>
                 <View style={styles.chips}>
-                  <Chip text={`${Number(p.interest_rate_pct_monthly)}% monthly`} />
+                  <Chip accent text={`${Number(p.interest_rate_pct_monthly)}% monthly`} />
                   <Chip text={`${Number(p.processing_fee_pct)}% fee`} />
                   <Chip text={p.repayment_cadence_options.map((c) => CADENCE[c] ?? c).join(' / ')} />
                   {p.max_tenure_days ? <Chip text={`Up to ${maxTenureMonths(p.max_tenure_days)} months`} /> : null}
@@ -130,10 +137,10 @@ export default function ChooseProduct() {
   );
 }
 
-function Chip({ text }: { text: string }) {
+function Chip({ text, accent }: { text: string; accent?: boolean }) {
   return (
-    <View style={styles.chip}>
-      <Text variant="small" style={{ fontSize: 12, fontFamily: font.semibold }}>
+    <View style={[styles.chip, accent && styles.chipAccent]}>
+      <Text variant="small" style={{ fontSize: 12, fontFamily: font.semibold, color: accent ? colors.cyanDeep : colors.text }}>
         {text}
       </Text>
     </View>
@@ -141,17 +148,38 @@ function Chip({ text }: { text: string }) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
+  productCard: { overflow: 'hidden', ...shadow },
+  accent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    backgroundColor: colors.cyan,
+    borderTopLeftRadius: radius.md,
+    borderBottomLeftRadius: radius.md,
+  },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md, paddingLeft: space.xs },
   icon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
+    width: 52,
+    height: 52,
+    borderRadius: radius.lg,
     backgroundColor: colors.mint,
+    borderWidth: 1,
+    borderColor: colors.yieldBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: space.md },
-  chip: { backgroundColor: colors.surface, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: space.md, paddingLeft: space.xs },
+  chip: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  chipAccent: { backgroundColor: colors.yieldBg, borderColor: colors.yieldBright },
   rules: { marginTop: space.md, gap: 6 },
   rule: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 });

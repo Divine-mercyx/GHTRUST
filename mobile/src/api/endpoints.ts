@@ -205,6 +205,8 @@ export const legal = {
       terms_hash: termsHash,
       transaction_pin: transactionPin,
     }),
+  rejectOffer: (applicationId: string) =>
+    api.post<void>(`/loans/me/applications/${applicationId}/offer/reject`, {}),
 };
 
 export const support = {

@@ -78,6 +78,18 @@ async def withdrawal_failed(db: AsyncSession, withdrawal) -> None:
 # ── Applications and loans ───────────────────────────────────────────────────
 
 
+async def offer_sent_to_customer(db: AsyncSession, application: LoanApplication) -> None:
+    product = await _product_name(db, product_id=application.product_id)
+    await NotificationService(db).notify(
+        application.customer_id,
+        "offer_sent",
+        "Your loan offer is ready",
+        f"Your {product} offer is ready. Review the amount and terms in the app and accept or decline.",
+        route=f"/applications/{application.id}/offer",
+        dedupe_key=f"offer_sent:{application.id}",
+    )
+
+
 async def application_approved(db: AsyncSession, application: LoanApplication) -> None:
     product = await _product_name(db, product_id=application.product_id)
     await NotificationService(db).notify(
@@ -88,6 +100,18 @@ async def application_approved(db: AsyncSession, application: LoanApplication) -
         "pay it out.",
         route=f"/applications/{application.id}/offer",
         dedupe_key=f"application_approved:{application.id}",
+    )
+
+
+async def application_fully_approved(db: AsyncSession, application: LoanApplication) -> None:
+    product = await _product_name(db, product_id=application.product_id)
+    await NotificationService(db).notify(
+        application.customer_id,
+        "application_fully_approved",
+        "Application approved",
+        f"Your {product} application passed final approval. We'll prepare your payout shortly.",
+        route=f"/applications/{application.id}",
+        dedupe_key=f"application_fully_approved:{application.id}",
     )
 
 

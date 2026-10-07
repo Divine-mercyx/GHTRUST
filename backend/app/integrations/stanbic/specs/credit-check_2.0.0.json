@@ -1,0 +1,361 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "Credit Check",
+        "version": "2.0.0",
+        "contact": {
+            "name": "Integration APIs Team",
+            "email": "Integrationsapis@stanbicibtc.com"
+        },
+        "description": "Credit check retrieves and assess creditwothiness.\n"
+    },
+    "basePath": "/test/sandbox/credit-check-services",
+    "paths": {
+        "/outstanding-loan": {
+            "parameters": [
+                {
+                    "name": "bvn",
+                    "required": true,
+                    "in": "query",
+                    "type": "string"
+                }
+            ],
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "schema": {
+                            "$ref": "#/definitions/OutstandingLoanSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad requiest",
+                        "schema": {
+                            "$ref": "#/definitions/OutstandingLoanFailureResponse"
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/responses/41"
+                    },
+                    "500": {
+                        "$ref": "#/responses/55"
+                    }
+                },
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "summary": "This api checks customer's outstanding loans.",
+                "description": "This api checks customer's outstanding loans."
+            }
+        },
+        "/cbn-credit-check": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "schema": {
+                            "$ref": "#/definitions/CBNCreditCheckSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/responses/99"
+                    },
+                    "401": {
+                        "$ref": "#/responses/41"
+                    },
+                    "500": {
+                        "$ref": "#/responses/55"
+                    }
+                },
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "name": "creditCheck",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CBNCreditCheck"
+                        }
+                    }
+                ],
+                "summary": "This API checks customer's credit history with cbn.",
+                "description": "This API checks customer's credit history with cbn."
+            }
+        },
+        "/private-credit-check": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "schema": {
+                            "$ref": "#/definitions/privateCheckSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/privateCheckFailureResponse"
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/responses/41"
+                    },
+                    "500": {
+                        "$ref": "#/responses/55"
+                    }
+                },
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "name": "body",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/privateCheck"
+                        }
+                    }
+                ],
+                "summary": "This API checks customer's credit history.",
+                "description": "This API checks customer's credit history."
+            }
+        }
+    },
+    "securityDefinitions": {
+        "clientID": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "Client-Id"
+        },
+        "clientSecret": {
+            "type": "apiKey",
+            "name": "Client-Secret",
+            "in": "header"
+        }
+    },
+    "security": [
+        {
+            "clientID": [],
+            "clientSecret": []
+        }
+    ],
+    "schemes": [
+        "https"
+    ],
+    "definitions": {
+        "privateCheck": {
+            "type": "object",
+            "properties": {
+                "bvn": {
+                    "type": "string",
+                    "enum": [
+                        "***********"
+                    ]
+                },
+                "requestReference": {
+                    "type": "string",
+                    "enum": [
+                        "32111222"
+                    ]
+                },
+                "requestReason": {
+                    "type": "string"
+                },
+                "phoneNumber": {
+                    "type": "string"
+                },
+                "loanAmount": {
+                    "type": "string"
+                }
+            }
+        },
+        "OutstandingLoanSuccessResponse": {
+            "type": "object",
+            "example": {
+                "responseCode": "00",
+                "responseMsg": "Customer has no outstanding loan."
+            }
+        },
+        "OutstandingLoanFailureResponse": {
+            "type": "object",
+            "example": {
+                "responseCode": "99",
+                "responseMsg": "Customer does not exist",
+                "responseDetails": "***********************"
+            }
+        },
+        "CBNCreditCheckSuccessResponse": {
+            "type": "object",
+            "example": {
+                "responseCode": "00",
+                "responseMessage": "Request completed successfully",
+                "summary": {
+                    "credits": [
+                        {
+                            "crmsReferenceNumber": "*************",
+                            "creditType": "Overdraft and Working Capital",
+                            "creditLimit": "145678325.12",
+                            "outstandingBalance": "145678325.12",
+                            "tenor": "92",
+                            "expiryDate": "29-07-2024",
+                            "grantingInstitution": "First Bank Plc",
+                            "performanceStatus": "GOOD"
+                        }
+                    ],
+                    "totalNumberOfCredit": "13",
+                    "totalNumberOfPerformingCredit": "0",
+                    "totalNumberOfNonPerformingCredits": "0"
+                }
+            }
+        },
+        "CBNCreditCheck": {
+            "type": "object",
+            "properties": {
+                "customerId": {
+                    "type": "string",
+                    "enum": [
+                        "***********"
+                    ]
+                },
+                "customerIdType": {
+                    "type": "string",
+                    "enum": [
+                        "BVN"
+                    ]
+                }
+            }
+        },
+        "privateCheckFailureResponse": {
+            "type": "object",
+            "example": {
+                "responseCode": "99",
+                "responseMessage": "BVN must be 11 digits"
+            }
+        },
+        "privateCheckSuccessResponse": {
+            "type": "object",
+            "example": {
+                "responseCode": "00",
+                "responseMessage": "Successful",
+                "responseDetails": {
+                    "bvn": "********",
+                    "message": "Customer with bvn '********' is  not credit worthy",
+                    "registriesReturned": 2,
+                    "errors": [],
+                    "registries": [
+                        "XDS",
+                        "CRS"
+                    ],
+                    "creditWorthy": false
+                }
+            }
+        }
+    },
+    "produces": [
+        "application/json"
+    ],
+    "consumes": [
+        "application/json"
+    ],
+    "tags": [
+        {
+            "name": "Confidential",
+            "description": "Business-sensitive information that requires restricted access"
+        },
+        {
+            "name": "PII",
+            "description": "Contains personally identifiable information such as BVN or phone number"
+        },
+        {
+            "name": "Financial",
+            "description": "Handles credit-related data including loan amounts"
+        },
+        {
+            "name": "User Data",
+            "description": "Involves customer identity, verification details"
+        },
+        {
+            "name": "Transaction Data",
+            "description": "Covers loan requests."
+        },
+        {
+            "name": "Stable",
+            "description": "Production-ready API with versioned releases"
+        }
+    ],
+    "responses": {
+        "41": {
+            "description": "Unauthorized",
+            "schema": {
+                "example": {
+                    "httpCode": "401",
+                    "httpMessage": "Unauthorized",
+                    "moreInformation": "Invalid client id or secret."
+                }
+            }
+        },
+        "55": {
+            "description": "Service Unavailable"
+        },
+        "99": {
+            "description": "Bad request",
+            "schema": {
+                "$ref": "#/definitions/privateCheckFailureResponse"
+            }
+        },
+        "200": {
+            "description": "Success"
+        },
+        "400": {
+            "description": "Bad Request",
+            "schema": []
+        },
+        "401": {
+            "description": "Unauthorized",
+            "schema": {
+                "example": {
+                    "httpCode": "401",
+                    "httpMessage": "Unauthorized",
+                    "moreInformation": "Invalid client id or secret."
+                }
+            }
+        },
+        "403": {
+            "description": "Forbidden"
+        },
+        "404": {
+            "description": "Not found"
+        },
+        "408": {
+            "description": "Request Timeout"
+        },
+        "500": {
+            "description": "Internal Server Error"
+        },
+        "502": {
+            "description": "Bad Gateway"
+        },
+        "503": {
+            "description": "Service Unavailable"
+        },
+        "00": {
+            "description": "Successful",
+            "schema": {
+                "$ref": "#/definitions/CBNCreditCheckSuccessResponse"
+            }
+        }
+    },
+    "host": "testapi.stanbicibtc.com"
+}

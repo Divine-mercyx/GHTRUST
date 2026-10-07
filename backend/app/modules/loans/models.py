@@ -107,6 +107,13 @@ class LoanApplication(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     # transaction PIN. Cleared if staff change the terms afterwards.
     offer_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     offer_terms_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    offer_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    offer_gate_stage_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("loan_workflow_stages.id"), nullable=True, index=True
+    )
+    offer_resume_stage_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("loan_workflow_stages.id"), nullable=True, index=True
+    )
 
     workflow_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("loan_workflows.id"), nullable=True, index=True

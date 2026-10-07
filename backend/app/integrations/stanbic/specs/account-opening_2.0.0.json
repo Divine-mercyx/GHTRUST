@@ -1,0 +1,331 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "version": "2.0.0",
+        "title": "Account Opening",
+        "description": "This is  API is used to initiate an account creation.",
+        "contact": {
+            "name": "Integration APIs Team",
+            "email": "Integrationsapis@stanbicibtc.com"
+        }
+    },
+    "servers": [
+        {
+            "url": "https://testapi.stanbicibtc.com/test/sandbox/account-opening"
+        }
+    ],
+    "paths": {
+        "/create": {
+            "description": "This API is used to create account.",
+            "summary": "This API is used to create account.",
+            "parameters": [],
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Successful",
+                        "content": {
+                            "application/json": {
+                                "examples": {
+                                    "Sample successful payload": {
+                                        "description": "This is a sample successful response payload.",
+                                        "value": {
+                                            "responseCode": "00",
+                                            "responseMsg": "SUCCESS",
+                                            "responseDesc": "Request with reference ACCT-202532180230203 is received for processing."
+                                        }
+                                    }
+                                },
+                                "schema": []
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "This is a sample failure response payload.",
+                        "content": {
+                            "application/json": {
+                                "examples": {
+                                    "Sample failure response": {
+                                        "description": "This is a sample failure response payload.",
+                                        "value": {
+                                            "responseCode": "99",
+                                            "responseMsg": "customerBVN is invalid"
+                                        }
+                                    }
+                                },
+                                "schema": []
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "This is a sample unauthorized response payload.",
+                        "content": {
+                            "application/json": {
+                                "examples": {
+                                    "Sample unauthorized payload": {
+                                        "description": "This is a sample unauthorized response payload.",
+                                        "value": {
+                                            "httpCode": "401",
+                                            "httpMessage": "Unauthorized",
+                                            "moreInformation": "Invalid client id or secret."
+                                        }
+                                    }
+                                },
+                                "schema": []
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Service Unavailable",
+                        "content": {
+                            "application/json": {
+                                "examples": {
+                                    "Service Unavailable": {
+                                        "description": "This is a sample response payload for Service Unavailable",
+                                        "value": {
+                                            "responsecode": "55",
+                                            "responseMsg": "Service Currently Unavailable"
+                                        }
+                                    }
+                                },
+                                "schema": []
+                            }
+                        }
+                    }
+                },
+                "description": "This is a sample request body.",
+                "summary": "This is a sample request body.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/createAccount"
+                            },
+                            "examples": {
+                                "Sample request payload": {
+                                    "description": "This is an example of a sample request payload.",
+                                    "value": {
+                                        "accountOpeningRefId": "ACCT-202532180230203",
+                                        "customerTitle": "041",
+                                        "channelId": "MBB",
+                                        "accountTier": "1",
+                                        "accountType": "1",
+                                        "accountManager": "",
+                                        "referralId": "",
+                                        "customerBVN": "*******",
+                                        "customerNIN": "*******",
+                                        "firstName": "*****",
+                                        "middleName": "********",
+                                        "lastName": "*****",
+                                        "dateOfBirth": "*******",
+                                        "customerAddress": "**********",
+                                        "lgaOfOrigin": "******** ",
+                                        "stateOfOrigin": "*******",
+                                        "maritalStatus": "******",
+                                        "gender": "Male",
+                                        "phoneNumber": "*******",
+                                        "customerEmail": "********",
+                                        "pepFlag": "N",
+                                        "branchId": "*******",
+                                        "lgaOfResidence": "******",
+                                        "stateOfResidence": "******",
+                                        "maidenName": "******"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "description": "This is a sample request body.",
+                    "required": true
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "ClientID": {
+                "type": "apiKey",
+                "name": "Client-Id",
+                "in": "header",
+                "description": "This is used for the API security"
+            },
+            "ClientSecret": {
+                "type": "apiKey",
+                "name": "Client-Secret",
+                "in": "header",
+                "description": "This is used for the API security"
+            }
+        },
+        "schemas": {
+            "createAccount": {
+                "type": "object",
+                "description": "This is the schema for createAccount.",
+                "properties": {
+                    "accountOpeningRefId": {
+                        "type": "string"
+                    },
+                    "customerTitle": {
+                        "type": "string"
+                    },
+                    "channelId": {
+                        "type": "string"
+                    },
+                    "accountTier": {
+                        "type": "string"
+                    },
+                    "accountType": {
+                        "type": "string"
+                    },
+                    "accountManager": {
+                        "type": "string"
+                    },
+                    "referralId": {
+                        "type": "string"
+                    },
+                    "customerBVN": {
+                        "type": "string"
+                    },
+                    "customerNIN": {
+                        "type": "string"
+                    },
+                    "firstName": {
+                        "type": "string"
+                    },
+                    "middleName": {
+                        "type": "string"
+                    },
+                    "lastName": {
+                        "type": "string"
+                    },
+                    "dateOfBirth": {
+                        "type": "string"
+                    },
+                    "customerAddress": {
+                        "type": "string"
+                    },
+                    "lgaOfOrigin": {
+                        "type": "string"
+                    },
+                    "stateOfOrigin": {
+                        "type": "string"
+                    },
+                    "maritalStatus": {
+                        "type": "string"
+                    },
+                    "gender": {
+                        "type": "string"
+                    },
+                    "phoneNumber": {
+                        "type": "string"
+                    },
+                    "customerEmail": {
+                        "type": "string"
+                    },
+                    "occupationCode": {
+                        "type": "string"
+                    },
+                    "employmentStatusCode": {
+                        "type": "string"
+                    },
+                    "pepFlag": {
+                        "type": "string"
+                    },
+                    "branchId": {
+                        "type": "string"
+                    },
+                    "lgaOfResidence": {
+                        "type": "string"
+                    },
+                    "stateOfResidence": {
+                        "type": "string"
+                    },
+                    "maidenName": {
+                        "type": "string"
+                    },
+                    "maidenNameOfMother": {
+                        "type": "string"
+                    },
+                    "nextOfKinDetails": {
+                        "type": "string"
+                    },
+                    "identityDocument": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "accountOpeningRefId",
+                    "channelId",
+                    "accountTier",
+                    "customerBVN",
+                    "firstName",
+                    "lastName",
+                    "dateOfBirth",
+                    "customerAddress",
+                    "lgaOfOrigin",
+                    "stateOfOrigin",
+                    "gender",
+                    "phoneNumber",
+                    "pepFlag",
+                    "branchId",
+                    "stateOfResidence"
+                ]
+            },
+            "createAccountSuccessPayload": {
+                "type": "object",
+                "description": "This is the schema for create account success payload.",
+                "example": {
+                    "responseCode": "00",
+                    "responseMsg": "SUCCESS",
+                    "responseDesc": "Request with reference ACCT-202532180230203 is received for processing."
+                }
+            },
+            "createAccountFailurePayload": {
+                "type": "string",
+                "description": "This is the schema for create account failure payload.",
+                "example": {
+                    "responseCode": "99",
+                    "responseMsg": "customerBVN is invalid"
+                }
+            }
+        }
+    },
+    "security": [
+        {
+            "ClientID": [],
+            "ClientSecret": []
+        }
+    ],
+    "tags": [
+        {
+            "name": "REST",
+            "description": "RESTful APIs."
+        },
+        {
+            "name": "Account Opening",
+            "description": "\nCaptures customer onboarding details including identity, contact,\nand demographic information for account creation."
+        },
+        {
+            "name": "Customer Onboarding",
+            "description": "\nHandles the registration of new customers, validation of BVN and NIN,\nand creation of Tier 1 bank accounts."
+        },
+        {
+            "name": "PII",
+            "description": "\nInvolves identifiable customer information such as name, address,\nBVN, NIN, and contact details."
+        },
+        {
+            "name": "KYC",
+            "description": "\nSupports Know Your Customer processes, including personal data and\ncompliance validation."
+        },
+        {
+            "name": "Financial",
+            "description": "\nRelates to customer accounts and financial onboarding within the\ncore banking ecosystem."
+        },
+        {
+            "name": "Confidential",
+            "description": "\nContains sensitive customer information and business-critical\nonboarding operations."
+        },
+        {
+            "name": "Stable",
+            "description": "Production-ready APIs."
+        }
+    ]
+}

@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     borderLeftColor: colors.cyan,
     ...shadow,
   },
-  actions: { flexDirection: 'row', gap: space.sm },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, justifyContent: 'space-between' },
   list: { backgroundColor: colors.card, borderRadius: radius.lg, overflow: 'hidden', ...shadow },
   skeletonRow: {
     height: TRANSACTION_ROW_HEIGHT,
