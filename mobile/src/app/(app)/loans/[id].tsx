@@ -5,7 +5,7 @@ import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { Card, Row, SectionHeader } from '@/components/Card';
-import { productName } from '@/lib/products';
+import { productName, rateLabel } from '@/lib/products';
 import { Screen } from '@/components/Screen';
 import { CardSkeleton, ErrorState, ProgressBar } from '@/components/States';
 import { Text } from '@/components/Text';
@@ -167,7 +167,7 @@ export default function LoanDetailScreen() {
       <SectionHeader title="Loan terms" />
       <Card style={{ paddingVertical: space.xs }}>
         <Term label="Amount borrowed" value={naira(l.principal)} />
-        <Term label="Interest" value={`${naira(l.total_interest)} (${Number(l.interest_rate)}% monthly)`} />
+        <Term label="Interest" value={`${naira(l.total_interest)} (${rateLabel(l.interest_rate, l.interest_method)})`} />
         <Term label="Total to repay" value={naira(l.total_repayable)} />
         <Term label="Repayments" value={`${l.installments_count} × ${CADENCE[l.repayment_cadence] ?? humanize(l.repayment_cadence)}`} />
         <Term label="Tenure" value={`${l.tenure_months} month${l.tenure_months === 1 ? '' : 's'}`} />

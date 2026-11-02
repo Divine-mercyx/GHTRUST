@@ -6,6 +6,7 @@ import { Card } from '@/components/Card';
 import { Text } from '@/components/Text';
 import { naira } from '@/lib/format';
 import { CADENCE } from '@/lib/status';
+import { rateLabel } from '@/lib/products';
 import { colors, font, HIT, space } from '@/theme/tokens';
 
 import { PAGES, submitProblems, type PageId } from './config';
@@ -90,7 +91,7 @@ export function ReviewPage({ application, product, draft, pages, agreed, onAgree
           {months ? `Over ${months} month${months === 1 ? '' : 's'}` : 'Tenure not set'} · {cadence} repayments
         </Text>
         <Text variant="small" color="rgba(255,255,255,0.65)" style={{ marginTop: space.xs }}>
-          {Number(product.interest_rate_pct_monthly)}% monthly interest · {Number(product.processing_fee_pct)}% processing fee. Final
+          {rateLabel(product.interest_rate_pct_monthly, product.interest_method)} · {Number(product.processing_fee_pct)}% processing fee. Final
           terms are confirmed when your loan is approved.
         </Text>
       </Card>

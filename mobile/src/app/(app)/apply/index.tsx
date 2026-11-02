@@ -15,6 +15,7 @@ import { maxTenureMonths } from '@/features/apply/config';
 import { eligibilityLines } from '@/lib/eligibility';
 import { keys, useApplications, useProducts } from '@/lib/queries';
 import { CADENCE } from '@/lib/status';
+import { rateLabel } from '@/lib/products';
 import { colors, font, radius, shadow, space } from '@/theme/tokens';
 
 const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -22,6 +23,8 @@ const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   payday_loan: 'briefcase-outline',
   study_loan: 'school-outline',
   asset_loan: 'car-outline',
+  lpo_invoice_financing: 'document-attach-outline',
+  cluster_group_loan: 'people-outline',
 };
 
 export default function ChooseProduct() {
@@ -95,7 +98,7 @@ export default function ChooseProduct() {
                   {busy ? <ActivityIndicator color={colors.navy} /> : <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />}
                 </View>
                 <View style={styles.chips}>
-                  <Chip accent text={`${Number(p.interest_rate_pct_monthly)}% monthly`} />
+                  <Chip accent text={rateLabel(p.interest_rate_pct_monthly, p.interest_method)} />
                   <Chip text={`${Number(p.processing_fee_pct)}% fee`} />
                   <Chip text={p.repayment_cadence_options.map((c) => CADENCE[c] ?? c).join(' / ')} />
                   {p.max_tenure_days ? <Chip text={`Up to ${maxTenureMonths(p.max_tenure_days)} months`} /> : null}

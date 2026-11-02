@@ -102,8 +102,9 @@ export function validatePage(fields: FieldDef[], draft: Draft): Record<string, s
   return errors;
 }
 
-export function validateGuarantors(list: GuarantorInput[]): string | null {
-  if (!list.length) return 'Add at least one guarantor.';
+/** `optional`: the product doesn't always need one (checked again at submit, by amount). */
+export function validateGuarantors(list: GuarantorInput[], optional = false): string | null {
+  if (!list.length) return optional ? null : 'Add at least one guarantor.';
   for (const g of list) {
     if (!g.full_name?.trim() || !/\s/.test(g.full_name.trim())) return "Enter each guarantor's full name.";
     if (!g.phone || !isPhone(g.phone)) return "Enter a valid phone number for each guarantor.";

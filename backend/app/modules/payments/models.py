@@ -125,6 +125,28 @@ class StanbicVirtualAccount(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     account_number: Mapped[str] = mapped_column(String(10), unique=True, index=True)
 
 
+class PayoutRecipient(Base, UUIDPrimaryKeyMixin, TimestampMixin):
+    """
+    A bank account the customer has saved for withdrawals ("Send money" recipients). Each was
+    validated by the rail and saved with the transaction PIN, exactly like the payout account;
+    the customer's current payout account (Customer.payout_*) is always one of these.
+    """
+
+    __tablename__ = "payout_recipients"
+    __table_args__ = (
+        UniqueConstraint("customer_id", "bank_code", "account_number", name="uq_payout_recipients_account"),
+    )
+
+    customer_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("customers.id"), index=True)
+    bank_code: Mapped[str] = mapped_column(String(10))
+    bank_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    account_number: Mapped[str] = mapped_column(String(20))
+    account_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # Paystack's transfer recipient code for this account, when Paystack is the rail.
+    recipient_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class LedgerJournal(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "ledger_journals"
     __table_args__ = (UniqueConstraint("idempotency_key", name="uq_ledger_journals_idempotency_key"),)
@@ -213,6 +235,8 @@ class WithdrawalRequest(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     recipient_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     transfer_reference: Mapped[str] = mapped_column(String(128))
     transfer_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # The customer's optional note, sent as the recipient's narration (validated in WithdrawRequest).
+    narration: Mapped[str | None] = mapped_column(String(30), nullable=True)
     status: Mapped[WithdrawalStatus] = mapped_column(
         StrEnum(WithdrawalStatus), default=WithdrawalStatus.PENDING, index=True
     )

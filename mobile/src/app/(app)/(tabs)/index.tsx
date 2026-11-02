@@ -11,11 +11,13 @@ import { Avatar } from '@/components/Avatar';
 import { Card, Row, SectionHeader } from '@/components/Card';
 import { BalanceCard, CircleAction } from '@/components/home/BalanceCard';
 import { PressableScale } from '@/components/home/PressableScale';
+import { MoneySummary } from '@/components/home/MoneySummary';
 import { TRANSACTION_ROW_HEIGHT, TransactionItem } from '@/components/home/TransactionItem';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Skeleton } from '@/components/States';
 import { Text } from '@/components/Text';
 import { recentActivity } from '@/lib/activity';
+import { greeting } from '@/lib/format';
 import {
   useApplications,
   useFeatures,
@@ -32,8 +34,9 @@ import { colors, font, radius, shadow, space } from '@/theme/tokens';
 const enter = (i: number) => FadeInDown.duration(380).delay(60 * i);
 
 /**
- * Home: greeting bar, balance card with four round actions, what needs doing (offer,
- * documents, draft), a product banner, recent activity, and help links.
+ * Home: greeting bar, the navy balance card with its gold pill, the Operations card
+ * (four quick actions), what needs doing (offer, documents, draft), money in and out this
+ * month, a product banner, recent transactions, and help links.
  */
 export default function Home() {
   const { firstName } = useSession();
@@ -112,13 +115,16 @@ export default function Home() {
   const moreActions: SheetAction[] = [
     { label: 'Apply for a loan', icon: 'add-circle-outline', onPress: () => router.push('/apply') },
     { label: 'My loans', icon: 'document-text-outline', onPress: () => router.push('/loans') },
+    ...(features.wallet
+      ? [{ label: 'Insights', icon: 'stats-chart-outline' as const, onPress: () => router.push('/insights') }]
+      : []),
     ...(features.investments
       ? [{ label: 'Invest', icon: 'trending-up-outline' as const, onPress: () => router.push('/invest') }]
       : []),
     ...(features.wallet
       ? [
           { label: 'Transactions', icon: 'receipt-outline' as const, onPress: () => router.push('/transactions') },
-          { label: 'Bank account for withdrawals', icon: 'business-outline' as const, onPress: () => router.push('/payout-account') },
+          { label: 'Saved bank accounts', icon: 'business-outline' as const, onPress: () => router.push('/withdraw') },
         ]
       : []),
   ];
@@ -141,14 +147,32 @@ export default function Home() {
         }
       : nextLoan && features.wallet
         ? { icon: 'flash', title: 'Pay ahead, finish sooner', subtitle: 'Repay any amount from your wallet', href: `/repay/${nextLoan.id}` }
-        : { icon: 'rocket', title: 'Get a loan in minutes', subtitle: 'Business, payday, study and asset loans', href: '/apply' };
+        : { icon: 'rocket', title: 'Get a loan in minutes', subtitle: 'Business, payday, study, group and LPO loans', href: '/apply' };
 
   return (
     <Screen onRefresh={refresh} refreshing={loans.isRefetching || applications.isRefetching}>
       <View style={styles.header}>
-        <Text variant="title" numberOfLines={1} style={{ flex: 1 }}>
-          Hi, <Text variant="title" style={{ fontFamily: font.extrabold }}>{name ?? 'there'}</Text>!
-        </Text>
+        <PressableScale accessibilityRole="button" accessibilityLabel="Profile" onPress={() => router.push('/profile')}>
+          <View style={styles.avatarRing}>
+            {me.data ? (
+              <Avatar profile={me.data} size={38} />
+            ) : (
+              <View style={styles.avatar}>
+                <Text variant="small" color={colors.white} style={{ fontFamily: font.bold }}>
+                  {initials}
+                </Text>
+              </View>
+            )}
+          </View>
+        </PressableScale>
+        <View style={{ flex: 1 }}>
+          <Text variant="small" muted numberOfLines={1}>
+            {greeting()}
+          </Text>
+          <Text variant="heading" numberOfLines={1} style={{ fontFamily: font.extrabold }}>
+            {name ?? 'there'}
+          </Text>
+        </View>
         <PressableScale
           accessibilityRole="button"
           accessibilityLabel={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
@@ -162,19 +186,6 @@ export default function Home() {
               </Text>
             </View>
           ) : null}
-        </PressableScale>
-        <PressableScale accessibilityRole="button" accessibilityLabel="Profile" onPress={() => router.push('/profile')}>
-          <View style={styles.avatarRing}>
-            {me.data ? (
-              <Avatar profile={me.data} size={38} />
-            ) : (
-              <View style={styles.avatar}>
-                <Text variant="small" color={colors.white} style={{ fontFamily: font.bold }}>
-                  {initials}
-                </Text>
-              </View>
-            )}
-          </View>
         </PressableScale>
         <PressableScale
           accessibilityRole="button"
@@ -201,20 +212,23 @@ export default function Home() {
         </Animated.View>
       )}
 
-      <Animated.View entering={enter(1)} style={styles.actions}>
-        {features.wallet ? (
-          <>
-            <CircleAction icon="add" label="Add money" onPress={() => router.push('/fund')} />
-            <CircleAction icon="arrow-up" label="Withdraw" onPress={() => router.push('/withdraw')} />
-          </>
-        ) : (
-          <>
-            <CircleAction icon="add" label="Apply" onPress={() => router.push('/apply')} />
-            <CircleAction icon="document-text-outline" label="My loans" onPress={() => router.push('/loans')} />
-          </>
-        )}
-        <CircleAction icon="card-outline" label="Repay" attention={overdue} onPress={repay} />
-        <CircleAction icon="chevron-down" label="More" onPress={() => setSheet('more')} />
+      <Animated.View entering={enter(1)} style={styles.operations}>
+        <Text variant="bodyStrong">Operations</Text>
+        <View style={styles.actions}>
+          {features.wallet ? (
+            <>
+              <CircleAction icon="paper-plane-outline" label="Send" onPress={() => router.push('/withdraw')} />
+              <CircleAction icon="add" label="Add money" onPress={() => router.push('/fund')} />
+            </>
+          ) : (
+            <>
+              <CircleAction icon="add" label="Apply" onPress={() => router.push('/apply')} />
+              <CircleAction icon="document-text-outline" label="My loans" onPress={() => router.push('/loans')} />
+            </>
+          )}
+          <CircleAction icon="card-outline" label="Repay" attention={overdue} onPress={repay} />
+          <CircleAction icon="grid-outline" label="More" onPress={() => setSheet('more')} />
+        </View>
       </Animated.View>
 
       {nudge ? (
@@ -235,6 +249,12 @@ export default function Home() {
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
           </PressableScale>
+        </Animated.View>
+      ) : null}
+
+      {features.wallet ? (
+        <Animated.View entering={enter(3)}>
+          <MoneySummary />
         </Animated.View>
       ) : null}
 
@@ -263,7 +283,7 @@ export default function Home() {
 
       <Animated.View entering={enter(4)}>
         <SectionHeader
-          title="Recent activity"
+          title={features.wallet ? 'Transactions' : 'Recent activity'}
           action={
             activity.length > 0 ? (
               <Pressable
@@ -271,7 +291,7 @@ export default function Home() {
                 hitSlop={10}
                 onPress={() => router.push(features.wallet ? '/transactions' : '/loans')}>
                 <Text variant="small" color={colors.cyanDeep} style={{ fontFamily: font.semibold }}>
-                  See all
+                  View all
                 </Text>
               </Pressable>
             ) : undefined
@@ -429,9 +449,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   avatar: { flex: 1, borderRadius: 19, backgroundColor: colors.navy, alignItems: 'center', justifyContent: 'center' },
-  cardSkeleton: { backgroundColor: colors.navy, borderRadius: radius.lg, padding: space.xl, gap: space.sm },
+  cardSkeleton: { backgroundColor: colors.navy, borderRadius: radius.xl, padding: space.xl, gap: space.sm },
   onNavy: { backgroundColor: 'rgba(255,255,255,0.14)' },
-  actions: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: space.xxs },
+  operations: { backgroundColor: colors.card, borderRadius: radius.lg, padding: space.md, gap: space.md, ...shadow },
+  actions: { flexDirection: 'row', justifyContent: 'space-between' },
   nudge: {
     flexDirection: 'row',
     alignItems: 'center',

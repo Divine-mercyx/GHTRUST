@@ -24,7 +24,7 @@ import { colors, HIT, radius, space } from '@/theme/tokens';
 const SLIDES: { title: string; body: string; Art: ComponentType<{ active: boolean }> }[] = [
   {
     title: 'Loans that fit your life',
-    body: 'Business, payday, study and asset loans. Apply from your phone in minutes, no queues.',
+    body: 'Business, payday, study, group and LPO financing. Apply from your phone in minutes, no queues.',
     Art: LoansArt,
   },
   {

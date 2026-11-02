@@ -58,6 +58,7 @@ const CADENCES: [string, string][] = [
   ['weekly', 'Weekly'],
   ['daily', 'Daily'],
   ['salary_date', 'On salary date'],
+  ['end_of_term', 'Once, at the end'],
 ]
 
 const DAYS_PER_MONTH = 30 // matches the servicing engine
@@ -85,7 +86,7 @@ export function CreateProductDialog({ open, existingCodes, onClose, onCreate }: 
   const [description, setDescription] = useState('')
   const [rate, setRate] = useState('')
   const [fee, setFee] = useState('3')
-  const [method, setMethod] = useState<'flat' | 'reducing_balance'>('flat')
+  const [method, setMethod] = useState<'flat' | 'reducing_balance' | 'one_off'>('flat')
   const [maxMonths, setMaxMonths] = useState('')
   const [penalty, setPenalty] = useState('')
   const [cadences, setCadences] = useState<string[]>(['monthly'])
@@ -230,6 +231,7 @@ export function CreateProductDialog({ open, existingCodes, onClose, onCreate }: 
                 <select value={method} onChange={(e) => setMethod(e.target.value as typeof method)} className={input}>
                   <option value="flat">Flat</option>
                   <option value="reducing_balance">Reducing balance</option>
+                  <option value="one_off">One-off charge (rate charged once, e.g. LPO)</option>
                 </select>
               </Field>
               <Field label="Longest tenure (months)" hint="Blank = no limit (app allows up to 24)." error={show('maxMonths')}>

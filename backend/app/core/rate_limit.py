@@ -99,7 +99,9 @@ class OtpService:
         self.redis = redis
 
     def _generate(self) -> str:
-        return "".join(secrets.choice("0123456789") for _ in range(get_settings().otp_length))
+        # Never a leading 0: some providers (Dojah's OTP route) take the code as a number.
+        length = get_settings().otp_length
+        return secrets.choice("123456789") + "".join(secrets.choice("0123456789") for _ in range(length - 1))
 
     async def send(self, purpose: str, identifier: str, phone: str) -> int:
         """Generate OTP, store its hash in Redis, dispatch SMS. Returns expiry seconds."""
@@ -118,7 +120,11 @@ class OtpService:
         else:
             otp = self._generate()
             # Send first: if delivery fails, no dangling OTP is left in Redis.
-            await get_sms_sender().send(phone, otp_message(otp, purpose))
+            sender = get_sms_sender()
+            if callable(getattr(type(sender), "send_otp", None)):  # the provider's own OTP route (Dojah)
+                await sender.send_otp(phone, otp, purpose)
+            else:
+                await sender.send(phone, otp_message(otp, purpose))
 
         async with self.redis.pipeline(transaction=True) as pipe:
             pipe.setex(key, settings.otp_expire_seconds, _hash_otp(otp))

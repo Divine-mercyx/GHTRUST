@@ -75,3 +75,10 @@ export function greeting(now = new Date()): string {
   const h = now.getHours();
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
 }
+
+/** Chart labels from "YYYY-MM-DD": "16 Dec" for a day, "Dec" for a month ("Dec 2026" when asked). */
+export function chartLabel(value: string, unit: 'day' | 'month', withYear = false): string {
+  const d = parse(value);
+  if (unit === 'day') return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return withYear ? `${MONTHS[d.getMonth()]} ${d.getFullYear()}` : MONTHS[d.getMonth()];
+}

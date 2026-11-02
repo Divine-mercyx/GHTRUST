@@ -1970,6 +1970,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/wallet/insights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Wallet Insights
+         * @description Money in and out of the wallet over a period, for the Insights screen.
+         */
+        get: operations["wallet_insights_api_v1_wallet_insights_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/recipients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Recipients
+         * @description Saved accounts to send (withdraw) to, most recently used first. Add one with POST /payout-account.
+         */
+        get: operations["list_recipients_api_v1_wallet_recipients_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wallet/recipients/{recipient_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Recipient
+         * @description Forget a saved account. The one withdrawals currently go to can't be removed.
+         */
+        delete: operations["remove_recipient_api_v1_wallet_recipients__recipient_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/wallet/transactions/{transaction_id}": {
         parameters: {
             query?: never;
@@ -2866,6 +2926,8 @@ export interface components {
             application_id: string | null;
             /** Withdrawal Id */
             withdrawal_id: string | null;
+            /** Narration */
+            narration?: string | null;
             /** Failure Reason */
             failure_reason: string | null;
             /**
@@ -3940,6 +4002,38 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** InsightCategory */
+        InsightCategory: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "funding" | "loan_payout" | "repayment" | "withdrawal" | "investment" | "investment_payout";
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "in" | "out";
+            /** Amount */
+            amount: number;
+            /** Count */
+            count: number;
+        };
+        /**
+         * InsightPoint
+         * @description Money in and out in one bucket: a day (1m) or a month (6m, 12m).
+         */
+        InsightPoint: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /** Money In */
+            money_in: number;
+            /** Money Out */
+            money_out: number;
+        };
         /**
          * InstallmentStatus
          * @enum {string}
@@ -3949,7 +4043,7 @@ export interface components {
          * InterestMethod
          * @enum {string}
          */
-        InterestMethod: "flat" | "reducing_balance";
+        InterestMethod: "flat" | "reducing_balance" | "one_off";
         /** InvestRequest */
         InvestRequest: {
             /** Plan Id */
@@ -4280,6 +4374,8 @@ export interface components {
             processing_fee_pct: string;
             /** Interest Rate Pct Monthly */
             interest_rate_pct_monthly: string;
+            /** @default flat */
+            interest_method: components["schemas"]["InterestMethod"];
             /** Max Tenure Days */
             max_tenure_days: number | null;
             /** Default Penalty Pct Daily */
@@ -4582,6 +4678,26 @@ export interface components {
             /** Account Number Masked */
             account_number_masked: string;
         };
+        /**
+         * PayoutRecipientResponse
+         * @description A saved account the customer can send (withdraw) to. The number is masked.
+         */
+        PayoutRecipientResponse: {
+            /** Id */
+            id: string;
+            /** Bank Code */
+            bank_code: string;
+            /** Bank Name */
+            bank_name?: string | null;
+            /** Account Name */
+            account_name?: string | null;
+            /** Account Number Masked */
+            account_number_masked: string;
+            /** Current */
+            current: boolean;
+            /** Last Used At */
+            last_used_at?: string | null;
+        };
         /** PendingApprovalResponse */
         PendingApprovalResponse: {
             /** Id */
@@ -4727,7 +4843,7 @@ export interface components {
          * RepaymentCadence
          * @enum {string}
          */
-        RepaymentCadence: "daily" | "weekly" | "monthly" | "salary_date";
+        RepaymentCadence: "daily" | "weekly" | "monthly" | "salary_date" | "end_of_term";
         /**
          * RepaymentChannel
          * @enum {string}
@@ -5541,6 +5657,32 @@ export interface components {
              */
             message: string;
         };
+        /** WalletInsightsResponse */
+        WalletInsightsResponse: {
+            /**
+             * Range
+             * @enum {string}
+             */
+            range: "1m" | "6m" | "12m";
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Money In */
+            money_in: number;
+            /** Money Out */
+            money_out: number;
+            /** Series */
+            series: components["schemas"]["InsightPoint"][];
+            /** Categories */
+            categories: components["schemas"]["InsightCategory"][];
+        };
         /** WalletSummaryResponse */
         WalletSummaryResponse: {
             /** Available Balance */
@@ -5608,6 +5750,8 @@ export interface components {
             loan_product?: string | null;
             /** Note */
             note?: string | null;
+            /** Narration */
+            narration?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -5655,6 +5799,16 @@ export interface components {
              * @description Customer's 4-digit transaction PIN
              */
             transaction_pin: string;
+            /**
+             * Recipient Id
+             * @description A saved recipient (GET /wallet/recipients) to send to; it becomes the payout account. Omitted: the current payout account.
+             */
+            recipient_id?: string | null;
+            /**
+             * Narration
+             * @description Optional note the recipient sees on their bank statement, up to 30 characters: letters, digits, spaces and . , ' & ( ) / -
+             */
+            narration?: string | null;
         };
         /** WithdrawalResponse */
         WithdrawalResponse: {
@@ -9495,6 +9649,87 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["WalletTransactionPage"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    wallet_insights_api_v1_wallet_insights_get: {
+        parameters: {
+            query?: {
+                /** @description Last month (by day), 6 or 12 months (by month) */
+                range?: "1m" | "6m" | "12m";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletInsightsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_recipients_api_v1_wallet_recipients_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutRecipientResponse"][];
+                };
+            };
+        };
+    };
+    remove_recipient_api_v1_wallet_recipients__recipient_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipient_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

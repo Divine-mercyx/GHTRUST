@@ -26,7 +26,7 @@ export function AuthBrandPanel() {
       </div>
 
       <p className="relative text-white/30 text-xs">
-        © {new Date().getFullYear()} GH Trust Microfinance Bank · Staff Portal
+        © {new Date().getFullYear()} GH Trust International Ltd · Staff Portal
       </p>
     </div>
   )

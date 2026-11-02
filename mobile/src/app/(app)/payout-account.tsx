@@ -79,7 +79,7 @@ export default function PayoutAccount() {
         onClose={() => setAskPin(false)}
         onPin={(pin) => save.mutateAsync(pin)}
       />
-      <Text muted>Withdrawals from your wallet are paid into this account.</Text>
+      <Text muted>Money you send from your wallet goes to this account. It stays saved for next time.</Text>
       {bankList.isError ? <Banner message={messageFor(bankList.error)} /> : null}
       {save.error && !pinError ? <Banner message={messageFor(save.error)} /> : null}
 

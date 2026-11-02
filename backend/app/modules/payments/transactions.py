@@ -12,7 +12,9 @@ while the customer scrolls never shifts or repeats rows.
 """
 
 import base64
-from datetime import datetime, timezone
+from collections import defaultdict
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import and_, exists, or_, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -102,9 +104,93 @@ _TITLE = {
 }
 
 
+# Insights buckets follow the customer's calendar (Nigeria), not UTC.
+LAGOS = ZoneInfo("Africa/Lagos")
+INSIGHT_MONTHS = {"6m": 6, "12m": 12}
+
+
+def _month_start(d: date, back: int = 0) -> date:
+    """First day of the month `back` months before d's month."""
+    index = d.year * 12 + d.month - 1 - back
+    return date(index // 12, index % 12 + 1, 1)
+
+
 class WalletTransactionService:
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    async def insights(self, customer_id: str, range_: str, today: date | None = None) -> dict:
+        """
+        Money in and out over the last month (by day) or 6 / 12 months (by month), and the
+        totals per kind. Counts what the history shows as completed or still in progress:
+        failed or cancelled withdrawals moved no money, so they're left out.
+        """
+        today = today or datetime.now(LAGOS).date()
+        if range_ == "1m":
+            start = today - timedelta(days=29)
+            buckets = [start + timedelta(days=i) for i in range(30)]
+        else:
+            months = INSIGHT_MONTHS[range_]
+            start = _month_start(today, months - 1)
+            buckets = [_month_start(today, back) for back in range(months - 1, -1, -1)]
+        since = datetime.combine(start, datetime.min.time(), LAGOS).astimezone(timezone.utc)
+
+        def bucket(at: datetime) -> date:
+            local = _utc(at).astimezone(LAGOS).date()
+            return local if range_ == "1m" else local.replace(day=1)
+
+        series = {b: [0.0, 0.0] for b in buckets}
+        kinds: dict[tuple[str, str], list[float]] = defaultdict(lambda: [0.0, 0])
+
+        def add(at: datetime, kind: str, direction: str, amount: float) -> None:
+            slot = series.get(bucket(at))
+            if slot is None:  # outside the range (e.g. a future-dated row)
+                return
+            slot[0 if direction == "in" else 1] += amount
+            totals = kinds[(kind, direction)]
+            totals[0] += amount
+            totals[1] += 1
+
+        journals = (
+            await self.db.execute(self._journals(customer_id).where(LedgerJournal.created_at >= since))
+        ).scalars()
+        for journal in journals:
+            add(
+                journal.created_at,
+                _KIND[journal.journal_type],
+                "in" if journal.journal_type in _MONEY_IN else "out",
+                self._wallet_amount(journal),
+            )
+        withdrawals = (
+            await self.db.execute(
+                select(WithdrawalRequest).where(
+                    WithdrawalRequest.customer_id == customer_id,
+                    WithdrawalRequest.created_at >= since,
+                    WithdrawalRequest.status.notin_([WithdrawalStatus.FAILED, WithdrawalStatus.CANCELLED]),
+                )
+            )
+        ).scalars()
+        for withdrawal in withdrawals:
+            add(withdrawal.created_at, "withdrawal", "out", float(withdrawal.amount))
+
+        return {
+            "range": range_,
+            "start": start,
+            "end": today,
+            "money_in": round(sum(v[0] for v in series.values()), 2),
+            "money_out": round(sum(v[1] for v in series.values()), 2),
+            "series": [
+                {"start": b, "money_in": round(v[0], 2), "money_out": round(v[1], 2)} for b, v in series.items()
+            ],
+            "categories": sorted(
+                (
+                    {"kind": kind, "direction": direction, "amount": round(v[0], 2), "count": int(v[1])}
+                    for (kind, direction), v in kinds.items()
+                ),
+                key=lambda c: c["amount"],
+                reverse=True,
+            ),
+        }
 
     def _journals(self, customer_id: str):
         touches_wallet = exists().where(
@@ -275,6 +361,7 @@ class WalletTransactionService:
             "loan_id": None,
             "loan_product": None,
             "note": note,
+            "narration": w.narration,
             "created_at": _utc(w.created_at),
             "completed_at": _utc(w.processed_at) if w.processed_at else None,
         }

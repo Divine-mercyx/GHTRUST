@@ -6,8 +6,10 @@ Assumptions to confirm with GH Trust's credit team (each is one place to change)
 * Interest method defaults to FLAT: total interest = principal x monthly rate
   x tenure months, spread evenly over installments. REDUCING_BALANCE
   (amortising) is supported per product via ``loan_products.interest_method``.
+  ONE_OFF charges principal x rate once, whatever the tenure (LPO financing).
 * Tenure → installments: monthly/salary-date = one per month; weekly =
-  ceil(months x 30 / 7); daily = months x 30 calendar days.
+  ceil(months x 30 / 7); daily = months x 30 calendar days; end-of-term = one,
+  due when the tenure ends.
 * Salary-date loans are due monthly on ``product_data.salary_day`` (1–31,
   clamped to month end), else the disbursement day-of-month.
 * Allocation: oldest installment first; within an installment, interest
@@ -84,6 +86,8 @@ def installment_count(tenure_months: int, cadence: RepaymentCadence) -> int:
         return math.ceil(tenure_months * DAYS_PER_MONTH / 7)
     if cadence == RepaymentCadence.DAILY:
         return tenure_months * DAYS_PER_MONTH
+    if cadence == RepaymentCadence.END_OF_TERM:
+        return 1
     return tenure_months  # monthly, salary_date
 
 
@@ -132,10 +136,14 @@ def build_schedule(
     principal = money(principal)
     monthly_rate = Decimal(str(monthly_rate_pct)) / 100
     n = installment_count(tenure_months, cadence)
-    dates = due_dates(start, n, cadence, salary_day)
+    if cadence == RepaymentCadence.END_OF_TERM:
+        dates = [add_months(start, tenure_months)]
+    else:
+        dates = due_dates(start, n, cadence, salary_day)
 
-    if method == InterestMethod.FLAT or monthly_rate == 0:
-        total_interest = money(principal * monthly_rate * tenure_months)
+    if method in (InterestMethod.FLAT, InterestMethod.ONE_OFF) or monthly_rate == 0:
+        months = 1 if method == InterestMethod.ONE_OFF else tenure_months
+        total_interest = money(principal * monthly_rate * months)
         principals = _split_evenly(principal, n)
         interests = _split_evenly(total_interest, n)
         return [

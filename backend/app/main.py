@@ -62,7 +62,7 @@ def create_app() -> FastAPI:
     docs = settings.enable_api_docs
     app = FastAPI(
         title=settings.app_name,
-        description="GH Trust International Ltd — Microfinance Banking API",
+        description="GH Trust International Ltd — lending, wallet and investments API",
         version=__version__,
         lifespan=lifespan,
         docs_url="/docs" if docs else None,

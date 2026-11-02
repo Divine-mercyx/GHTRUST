@@ -5,6 +5,14 @@
 const fs = require('fs');
 const path = require('path');
 
+// Loaded on every run, not only for release builds: the runtime-version fingerprint counts the
+// config plugin files that load, and eas-cli computes it on this machine without
+// EAS_BUILD_PROFILE. Loading them only on the build server made the two fingerprints differ
+// and failed the build ("Runtime version mismatch"). Pinning only changes native networking
+// config, so builds with and without it can share JavaScript updates.
+const { ALL: PINS, ANDROID_EXPIRY_DAYS } = require('./config/pins');
+const withApiPinning = require('./plugins/withApiPinning');
+
 const RELEASE_PROFILES = ['preview', 'production'];
 
 // Android push needs Firebase's google-services.json. On EAS it comes from a "file"
@@ -36,16 +44,24 @@ module.exports = ({ config }) => {
       throw new Error('EXPO_PUBLIC_ANDROID_STORE_URL must be set for production (the forced-update screen links to it).');
     }
   }
+  // The development build is its own app ("GH Trust Dev", ng.ghtrust.app.dev), so it installs
+  // next to the preview / store app instead of clashing with it (same package, different build:
+  // Android refuses with "package appears to be invalid"). APP_VARIANT comes from eas.json.
+  if (process.env.APP_VARIANT === 'development') {
+    config.name = 'GH Trust Dev';
+    config.android = { ...config.android, package: 'ng.ghtrust.app.dev' };
+    config.ios = { ...config.ios, bundleIdentifier: 'ng.ghtrust.app.dev' };
+  }
+
   const firebase = googleServicesFile();
   if (firebase) config.android = { ...config.android, googleServicesFile: firebase };
 
   // Certificate pinning on the API host, in tester and store builds only (development builds
   // talk to a laptop over plain HTTP). See config/pins.js and docs/certificate-pinning.md.
   if (RELEASE_PROFILES.includes(profile) && process.env.EXPO_PUBLIC_API_URL?.startsWith('https://')) {
-    const { ALL, ANDROID_EXPIRY_DAYS } = require('./config/pins');
     const host = new URL(process.env.EXPO_PUBLIC_API_URL).hostname;
     const expiration = new Date(Date.now() + ANDROID_EXPIRY_DAYS * 86_400_000).toISOString().slice(0, 10);
-    config = require('./plugins/withApiPinning')(config, { host, pins: ALL, expiration });
+    config = withApiPinning(config, { host, pins: PINS, expiration });
   }
   return config;
 };

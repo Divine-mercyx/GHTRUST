@@ -131,3 +131,26 @@ class TestAllocation:
         schedule = [self._line(1, "100", "20", "100", "20"), self._line(2, "100", "20")]
         allocations = LoanServicingService.allocate(schedule, Decimal("30"))
         assert allocations[0].installment == 2
+
+
+class TestOneOffCharge:
+    """LPO / invoice financing: 7% once, repaid in one go when the contract is paid."""
+
+    def test_end_of_term_is_one_repayment_with_the_charge_once(self):
+        lines = build_schedule(
+            principal=Decimal("500000"), monthly_rate_pct=Decimal("7"), tenure_months=4,
+            cadence=RepaymentCadence.END_OF_TERM, method=InterestMethod.ONE_OFF, start=START,
+        )
+        assert len(lines) == 1
+        assert lines[0].due_date == add_months(START, 4)
+        assert (lines[0].principal, lines[0].interest) == (Decimal("500000.00"), Decimal("35000.00"))
+
+    def test_one_off_doesnt_grow_with_the_tenure(self):
+        lines = build_schedule(
+            principal=Decimal("300000"), monthly_rate_pct=Decimal("7"), tenure_months=3,
+            cadence=RepaymentCadence.MONTHLY, method=InterestMethod.ONE_OFF, start=START,
+        )
+        assert len(lines) == 3 and total(lines, "interest") == Decimal("21000.00")
+
+    def test_end_of_term_counts_one_installment(self):
+        assert installment_count(9, RepaymentCadence.END_OF_TERM) == 1

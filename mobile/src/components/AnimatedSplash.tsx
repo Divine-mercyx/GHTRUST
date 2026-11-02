@@ -1,13 +1,14 @@
 /**
  * Branded start-up animation, drawn over the app while it boots.
  *
- * Its first frame matches the native splash (navy, white GH tile in the centre), so the
- * native splash can fade out underneath with no visible jump. Then: the tile settles, the
- * cyan dot pops in with a ripple, the tile rises and the wordmark writes itself in, and
+ * Its first frame matches the native splash (navy, the logo on a white tile in the centre;
+ * both from scripts/make-logo.py), so the native splash can fade out underneath with no
+ * visible jump. Then: the tile settles with a ripple, rises and the wordmark writes itself in, and
  * the whole thing lifts away once the app is ready and the intro has played.
  */
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
@@ -26,9 +27,10 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { colors, font } from '@/theme/tokens';
 
-const TILE = 76; // same width as the native splash image (app.json → imageWidth)
+const TILE = 96; // same width as the native splash image (app.json → imageWidth)
+const MARK = require('../../assets/images/logo.png');
 const WORDMARK = 'GH Trust';
-const TAGLINE = 'MICROFINANCE BANK';
+const TAGLINE = 'SECURE TODAY. GROW TOMORROW.';
 // Heights below the tile: gap, wordmark, gap, tagline, gap, progress line.
 const BELOW = 24 + 40 + 6 + 16 + 26 + 3;
 const PLAY_MS = 3200; // the intro always plays in full (plus a beat to take it in), however fast start-up is
@@ -47,7 +49,6 @@ export function AnimatedSplash({ ready, onDone }: Props) {
   const [timedOut, setTimedOut] = useState(false);
 
   const settle = useSharedValue(1);
-  const dot = useSharedValue(0);
   const ripple = useSharedValue(0);
   const lift = useSharedValue(0);
   const word = useSharedValue(0);
@@ -59,14 +60,12 @@ export function AnimatedSplash({ ready, onDone }: Props) {
 
   useEffect(() => {
     if (reduced) {
-      dot.value = 1;
       lift.value = 1;
       word.value = withTiming(1, { duration: 300 });
       tagline.value = withTiming(1, { duration: 300 });
       progress.value = withTiming(1, { duration: 500 });
     } else {
       settle.value = withSequence(withTiming(0.9, { duration: 200 }), withSpring(1, { damping: 8, stiffness: 190 }));
-      dot.value = withDelay(280, withSpring(1, { damping: 7, stiffness: 240 }));
       ripple.value = withDelay(300, withTiming(1, { duration: 1500, easing: Easing.out(Easing.cubic) }));
       lift.value = withDelay(640, withSpring(1, { damping: 15, stiffness: 110 }));
       word.value = withDelay(780, withTiming(1, { duration: 720, easing: EASE_OUT }));
@@ -81,7 +80,7 @@ export function AnimatedSplash({ ready, onDone }: Props) {
       clearTimeout(play);
       clearTimeout(failsafe);
     };
-  }, [reduced, settle, dot, ripple, lift, word, tagline, shine, progress, drift]);
+  }, [reduced, settle, ripple, lift, word, tagline, shine, progress, drift]);
 
   const leaving = (played && ready) || timedOut;
   useEffect(() => {
@@ -103,7 +102,6 @@ export function AnimatedSplash({ ready, onDone }: Props) {
     transform: [{ translateY: (1 - lift.value) * (BELOW / 2) - exit.value * 28 }, { scale: 1 + exit.value * 0.06 }],
   }));
   const tile = useAnimatedStyle(() => ({ transform: [{ scale: settle.value }] }));
-  const dotStyle = useAnimatedStyle(() => ({ transform: [{ scale: dot.value }] }));
   const shineStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: interpolate(shine.value, [0, 1], [-TILE * 1.2, TILE * 1.4]) }, { rotate: '20deg' }],
   }));
@@ -140,8 +138,7 @@ export function AnimatedSplash({ ready, onDone }: Props) {
             </>
           )}
           <Animated.View style={[styles.tile, tile]}>
-            <Animated.Text style={styles.tileText}>GH</Animated.Text>
-            <Animated.View style={[styles.dot, dotStyle]} />
+            <Image source={MARK} style={styles.mark} contentFit="contain" />
             <Animated.View style={[styles.shine, shineStyle]} />
           </Animated.View>
         </View>
@@ -214,16 +211,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  tileText: { fontFamily: font.extrabold, fontSize: TILE * 0.38, color: colors.navy },
-  dot: {
-    position: 'absolute',
-    right: '16%',
-    top: '16%',
-    width: TILE * 0.16,
-    height: TILE * 0.16,
-    borderRadius: TILE * 0.08,
-    backgroundColor: colors.cyan,
-  },
+  // Same inset as the native splash image (scripts/make-logo.py: 14% each side).
+  mark: { width: TILE * 0.72, height: TILE * 0.72 },
   shine: {
     position: 'absolute',
     top: -TILE * 0.3,

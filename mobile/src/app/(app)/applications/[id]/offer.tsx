@@ -21,7 +21,7 @@ import { keys, useApplication, useLoanOffer } from '@/lib/queries';
 import { CADENCE } from '@/lib/status';
 import { colors, font, radius, space } from '@/theme/tokens';
 
-const METHOD: Record<string, string> = { flat: 'flat', reducing_balance: 'on the reducing balance' };
+const METHOD: Record<string, string> = { flat: 'flat', reducing_balance: 'on the reducing balance', one_off: 'charged once' };
 
 /**
  * The approved loan's key facts and agreement. The loan is only paid out after the
@@ -191,7 +191,11 @@ export default function LoanOfferScreen() {
         <Fact label="Repayments" value={`${o.installments} × ${CADENCE[o.cadence]?.toLowerCase() ?? o.cadence}`} />
         <Fact
           label="Interest rate"
-          value={`${Number(o.interest_rate_pct_monthly)}% a month, ${METHOD[o.interest_method] ?? o.interest_method}`}
+          value={
+            o.interest_method === 'one_off'
+              ? `${Number(o.interest_rate_pct_monthly)}%, ${METHOD.one_off}`
+              : `${Number(o.interest_rate_pct_monthly)}% a month, ${METHOD[o.interest_method] ?? o.interest_method}`
+          }
         />
         <Fact label="Total interest" value={naira(o.total_interest)} />
         <Fact label={`Processing fee (${Number(o.processing_fee_pct)}%)`} value={naira(o.processing_fee)} />

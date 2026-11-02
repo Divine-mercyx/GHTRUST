@@ -224,7 +224,11 @@ class TestAdminSettings:
 
         listing = await api_client.get("/api/v1/admin/loans/products", headers=admin_headers)
         product = next(p for p in listing.json() if p["code"] == "lpo_invoice_financing")
-        assert product["is_active"] is False
+        assert product["is_active"] is True  # on since the website catalogue (migration 029)
+        off = await api_client.patch(
+            "/api/v1/admin/loans/products/lpo_invoice_financing", headers=admin_headers, json={"is_active": False}
+        )
+        assert off.status_code == 200, off.text
 
         # LPO has no approval workflow yet: switching it on would strand its applications.
         blocked = await api_client.patch(

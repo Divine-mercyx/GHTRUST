@@ -104,6 +104,7 @@ export default function TransactionReceipt() {
             value={transactionDetail(t)}
           />
         ) : null}
+        {t.narration ? <Line label="Note" value={t.narration} /> : null}
         <Line label="Date" value={dateTime(t.created_at)} />
         {t.completed_at && t.status === 'completed' && t.kind === 'withdrawal' ? (
           <Line label="Completed" value={dateTime(t.completed_at)} />

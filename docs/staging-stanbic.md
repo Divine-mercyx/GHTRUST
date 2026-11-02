@@ -39,8 +39,8 @@ Type the secret values in Railway yourself; never paste them into chat or email.
 | `UPLOAD_DIR` | `/app/uploads` |
 | `CORS_ORIGINS` | `http://localhost:5173` (the admin portal run locally against staging), plus any staging portal origin |
 | `FEATURE_FLAGS` | `wallet,investments` |
-| `SMS_MOCK` / `OTP_TEST_ECHO` | `true` / `true`: no texts are sent; the code is shown in the app |
-| `DOJAH_MOCK` | `true` (or Dojah sandbox keys with `false`) |
+| `SMS_MOCK` / `OTP_TEST_ECHO` | `true` / `true`: no texts, the code is shown in the app. For real texts like the live app: `false` / `false` with `SMS_PROVIDER=dojah`, `DOJAH_APP_ID`, `DOJAH_SECRET_KEY`, `DOJAH_SENDER_ID` |
+| `DOJAH_MOCK` | `true`, or `false` with Dojah keys so any customer can sign up with their real BVN (each lookup is charged) |
 | `DEMO_BVNS` | optional: made-up 11-digit BVNs testers can sign up with (no Dojah) |
 | `DEMO_OTP` | 6 digits, needed with `DEMO_BVNS` |
 | `PUSH_MOCK` | `true` |
@@ -81,7 +81,7 @@ answer 00 with their name.
 To try the same thing on your laptop first: `python backend/scripts/dev_server.py --stanbic --port 8001`
 (identity checks and SMS mocked, Stanbic real), then `--api http://127.0.0.1:8001`.
 
-## 4. Give Stanbic
+## 4. Give Stanbic (through their onboarding form)
 
 - Name Enquiry URL: `https://<staging domain>/api/v1/webhooks/stanbic/virtual-id/name-enquiry`
 - Transaction Notification URL: `https://<staging domain>/api/v1/webhooks/stanbic/virtual-id/transaction/notification`
@@ -89,6 +89,8 @@ To try the same thing on your laptop first: `python backend/scripts/dev_server.p
   the shared Slack thread.
 - The certificate is Railway's (Let's Encrypt), which their spec's "valid and recognised SSL
   certificate" rule accepts.
+- No IP addresses either way: Stanbic doesn't use fixed IPs, so no allow-list and no Railway static IP.
+- For the test payment: a 5960 account number from a tester who signed up **on staging**.
 
 ## 5. UAT run
 

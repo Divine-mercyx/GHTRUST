@@ -4,6 +4,9 @@ import { api, request } from './client';
 import { GATE_PLATFORM, APP_VERSION } from './config';
 import type {
   CardTopUp,
+  InsightRange,
+  PayoutRecipient,
+  WalletInsights,
   Investment,
   InvestmentPlan,
   AppConfig,
@@ -182,8 +185,24 @@ export const wallet = {
     account: { bank_code: string; bank_name: string; account_number: string; account_name: string },
     transactionPin: string,
   ) => api.post<PayoutAccountSaved>('/wallet/payout-account', { ...account, transaction_pin: transactionPin }),
-  withdraw: (amount: string, transactionPin: string, idempotencyKey: string) =>
-    api.post<Withdrawal>('/wallet/withdraw', { amount, transaction_pin: transactionPin }, { idempotencyKey }),
+  /**
+   * `recipientId`: a saved account to send to (it becomes the payout account); omitted = the current one.
+   * `narration`: the customer's note, shown on the recipient's bank statement.
+   */
+  withdraw: (amount: string, transactionPin: string, idempotencyKey: string, recipientId?: string, narration?: string) =>
+    api.post<Withdrawal>(
+      '/wallet/withdraw',
+      {
+        amount,
+        transaction_pin: transactionPin,
+        ...(recipientId ? { recipient_id: recipientId } : {}),
+        ...(narration ? { narration } : {}),
+      },
+      { idempotencyKey },
+    ),
+  recipients: () => api.get<PayoutRecipient[]>('/wallet/recipients'),
+  removeRecipient: (id: string) => api.delete<void>(`/wallet/recipients/${encodeURIComponent(id)}`),
+  insights: (range: InsightRange) => api.get<WalletInsights>('/wallet/insights', { query: { range } }),
 };
 
 export const notifications = {

@@ -301,7 +301,7 @@ function LoanProductsPageContent() {
                         <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-md', pm.soft, pm.accent)}>
                           {pm.label}
                         </span>
-                        <span className="text-[10px] text-slate-400">{p.interest_rate_pct_monthly}% / mo</span>
+                        <span className="text-[10px] text-slate-400">{p.interest_rate_pct_monthly}% {p.interest_method === 'one_off' ? 'once' : '/ mo'}</span>
                         {!p.is_active && (
                           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-500">Off</span>
                         )}

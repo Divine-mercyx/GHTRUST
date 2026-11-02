@@ -10,7 +10,7 @@ import { Text } from '@/components/Text';
 import { colors, radius, space } from '@/theme/tokens';
 
 const POINTS: { icon: keyof typeof Ionicons.glyphMap; title: string; body: string }[] = [
-  { icon: 'flash-outline', title: 'Apply in minutes', body: 'Business, payday, study and asset loans from your phone.' },
+  { icon: 'flash-outline', title: 'Apply in minutes', body: 'Business, payday, study, group and LPO financing from your phone.' },
   { icon: 'eye-outline', title: 'Track every step', body: 'See where your application is, from review to payout.' },
   { icon: 'shield-checkmark-outline', title: 'Secure by design', body: 'BVN-verified sign-up, and your phone locks the app.' },
 ];
@@ -22,7 +22,7 @@ export default function Welcome() {
         <Animated.View entering={FadeInDown.duration(500)} style={styles.brand}>
           <Logo size={64} inverse />
           <Text variant="caption" color={colors.cyan} style={{ marginTop: space.lg }}>
-            GH TRUST MICROFINANCE BANK
+            GH TRUST INTERNATIONAL LTD
           </Text>
           <Text variant="display" color={colors.white}>
             Finance that moves{'\n'}at your pace.

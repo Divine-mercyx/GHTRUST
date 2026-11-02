@@ -14,7 +14,7 @@ const KNOWN: Record<string, (v: unknown) => string | null> = {
   min_salary_statement_months: (v) => `${v} months of salary statements`,
   requires_remita_mandate: (v) => (v ? 'Salary repayment mandate (Remita)' : null),
   no_cash_repayment: (v) => (v ? 'Repaid from your salary, not in cash' : null),
-  ghtrust_contribution_pct: (v) => `We pay ${v}% of the fees`,
+  ghtrust_contribution_pct: (v) => `We finance up to ${v}% of first-year tuition`,
   applicant_contribution_pct: (v) => `You contribute ${v}%`,
   guardian_min_years_employed: (v) => `Guardian employed for ${v}+ years`,
   guardian_max_age: (v) => `Guardian aged ${v} or under`,
@@ -25,6 +25,12 @@ const KNOWN: Record<string, (v: unknown) => string | null> = {
   max_age: (v) => `Aged ${v} or under`,
   min_amount: (v) => `From ₦${Number(v).toLocaleString()}`,
   max_amount: (v) => `Up to ₦${Number(v).toLocaleString()}`,
+  security_from_amount: (v) => `A guarantor or collateral from ₦${Number(v).toLocaleString()}`,
+  requires_verified_lpo: (v) => (v ? 'A verified LPO, invoice or supply contract' : null),
+  collateral_if_no_domiciliation: (v) => (v ? 'Collateral if payment isn’t domiciled with us' : null),
+  max_group_members: (v) => `Groups of up to ${v} members who know each other`,
+  group_guarantee: (v) => (v ? 'Members share responsibility for repayment' : null),
+  repayment_starts_after_days: (v) => `Repayments start ${v} days after payout`,
 };
 
 export function eligibilityLines(rules: Record<string, unknown> | null | undefined): string[] {

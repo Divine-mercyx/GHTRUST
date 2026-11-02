@@ -29,7 +29,7 @@ function Shell({ subtitle, children }: { subtitle: string; children: React.React
     <div className="min-h-screen bg-slate-50 px-4 py-10">
       <div className="mx-auto max-w-2xl space-y-6">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-navy flex items-center justify-center text-white font-bold text-sm">GH</div>
+          <img src="/logo.png" alt="GH Trust" className="h-10 w-10 rounded-lg border border-slate-200 bg-white p-1" />
           <div>
             <p className="text-sm font-bold text-navy tracking-tight">GH Trust</p>
             <p className="text-xs text-slate-500">{subtitle}</p>

@@ -52,17 +52,30 @@ Code: `backend/app/modules/payments/stanbic_fvid.py`.
   - Both require headers `provider_id` / `provider_secret` (`STANBIC_FVID_PROVIDER_ID` /
     `STANBIC_FVID_PROVIDER_SECRET`, chosen by us, given to Stanbic privately). Without them: 503.
   - The wallet is credited the notified `amount`. Stanbic's charges (`bankCharge`, `adminFee`, VAT,
-    `amountNetChargesAndVat`) are stored on the payment for reconciliation. **Confirm with Stanbic
-    and the business** who bears them (today GH Trust does).
+    `amountNetChargesAndVat`) are stored on the payment for reconciliation. **Stanbic confirmed
+    (Oct 30): GH Trust bears the charges**, and the net amount (`amountNetChargesAndVat`) settles
+    into our pooled account at **end of day**, not per payment. So customers are credited the gross
+    amount at once, the daily settlement is lower by GH Trust's charges, and same-day withdrawals
+    are paid before that day's settlement arrives: the business needs float in the account.
+  - Stanbic retries an unsuccessful notification **4 times** (interval not given). Safe: each
+    payment is credited once per `sessionId`.
+  - Stanbic calls from **no fixed IP addresses**, so there's no IP allow-list; the
+    `provider_id` / `provider_secret` headers are the check.
+  - The callback URLs and credentials are registered through Stanbic's **onboarding form** (link
+    in the Slack thread), not by chat.
 - Polling stays as the safety net for a missed notification.
 
 ## Transfers out (withdrawals and loan payouts)
 
-- NPS single transfer, transfer status and name enquiry: `portal_sandbox.py`, `StanbicClient`.
+- Single transfer ("NPS" in the portal docs; Stanbic's team calls it NIP, same API), transfer
+  status and name enquiry: `portal_sandbox.py`, `StanbicClient`.
 - **Bank codes:** Stanbic routes on 6-digit institution codes; the app and older saved accounts
   use 3-digit CBN codes. `bank_codes.py` converts using Stanbic's **Bank List**, which gives both
   codes per bank. Unknown codes are refused, never guessed. With Stanbic as the rail, the app's
   bank picker shows Stanbic's list.
+- **Narration:** a withdrawal's optional customer note (30 characters: letters, digits, spaces
+  and `. , ' & ( ) / -`) is sent as `destAcctNarration`; `srcAcctNarration` stays "GH Trust wallet
+  withdrawal". 30 is our limit until Stanbic confirms theirs.
 
 ## Other products
 
@@ -87,15 +100,33 @@ auto-retried, and unknown codes wait for the status check.
 - Test account (UAT): **9202314303** (APIC TEST DUMMY ACCOUNT). Accepted as the NPS transfer source.
 - VA transaction history: subscribe to **Transaction History (VA) 3.0.0** (product 14378) on the portal.
 
+## Answered by Stanbic (Oct 30, 2026)
+
+- **Callback URLs:** register them on Stanbic's onboarding form.
+- **Test payment into a 5960 account:** we share a virtual account number and Stanbic credits it.
+  Use a number from the **staging** server (a tester signs up there), never a laptop's.
+- **IPs:** Stanbic uses no fixed IPs either way, so there's nothing to allow-list on our side and no
+  fixed outbound IP needed on Railway.
+- **Retries:** 4 for an unsuccessful notification.
+- **Charges:** borne by GH Trust; the net amount settles into our pool at end of day.
+
 ## Still needed from Stanbic
 
-1. A second test account (with bank code) to complete a successful NPS transfer, and whether
-   9202314303 holds test funds.
-2. A way to make a test payment into a 5960 virtual account (to see a real notification).
-3. Their outbound IP addresses (optional allow-list) and whether they retry unsuccessful notifications.
-4. Who bears the notification charges, and which amount settles into our pooled account.
-5. Fix: VA history must only return the calling client's prefix.
-6. Live prefix, live URLs and live keys (into Railway, never by email or chat).
+1. A second test account (with bank code) to complete a successful transfer, and whether
+   9202314303 holds test funds (asked twice).
+2. Who receives the `provider_id` / `provider_secret`, privately.
+3. Is the end-of-day settlement one lump sum, and is there a report or statement to reconcile it against?
+4. Fix: VA history must only return the calling client's prefix.
+5. Live prefix, live URLs and live keys (into Railway, never by email or chat).
+6. Maximum length and allowed characters for `srcAcctNarration` / `destAcctNarration` on
+   transfers (we allow 30).
+
+## Our next steps
+
+1. Get the staging server live (Railway billing, then `docs/staging-stanbic.md`).
+2. Fill Stanbic's onboarding form with the staging callback URLs.
+3. Sign up a tester on staging and send Stanbic the 5960 number to credit.
+4. Agree float for same-day withdrawals with the business.
 
 ## Staging server for UAT
 

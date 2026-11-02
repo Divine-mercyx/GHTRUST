@@ -1,5 +1,7 @@
 import { apiFetch, API_BASE, ApiError } from './api'
 
+export type InterestMethod = 'flat' | 'reducing_balance' | 'one_off'
+
 export interface LoanProduct {
   id: string
   code: string
@@ -8,6 +10,8 @@ export interface LoanProduct {
   is_active: boolean
   processing_fee_pct: string
   interest_rate_pct_monthly: string
+  /** one_off: the rate is charged once for the whole loan (LPO financing), not per month. */
+  interest_method?: InterestMethod
   max_tenure_days?: number | null
   repayment_cadence_options?: string[]
   required_document_types?: string[]
@@ -20,7 +24,7 @@ export interface LoanProductInput {
   description?: string | null
   interest_rate_pct_monthly: string
   processing_fee_pct: string
-  interest_method: 'flat' | 'reducing_balance'
+  interest_method: InterestMethod
   max_tenure_days: number | null
   default_penalty_pct_daily: string | null
   repayment_cadence_options: string[]

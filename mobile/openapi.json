@@ -2,7 +2,7 @@
  "openapi": "3.1.0",
  "info": {
   "title": "GH Trust MFB API",
-  "description": "GH Trust International Ltd \u2014 Microfinance Banking API",
+  "description": "GH Trust International Ltd \u2014 lending, wallet and investments API",
   "version": "0.2.0"
  },
  "paths": {
@@ -5905,6 +5905,134 @@
     }
    }
   },
+  "/api/v1/wallet/insights": {
+   "get": {
+    "tags": [
+     "Wallet"
+    ],
+    "summary": "Wallet Insights",
+    "description": "Money in and out of the wallet over a period, for the Insights screen.",
+    "operationId": "wallet_insights_api_v1_wallet_insights_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "range",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "enum": [
+        "1m",
+        "6m",
+        "12m"
+       ],
+       "type": "string",
+       "description": "Last month (by day), 6 or 12 months (by month)",
+       "default": "6m",
+       "title": "Range"
+      },
+      "description": "Last month (by day), 6 or 12 months (by month)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WalletInsightsResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/wallet/recipients": {
+   "get": {
+    "tags": [
+     "Wallet"
+    ],
+    "summary": "List Recipients",
+    "description": "Saved accounts to send (withdraw) to, most recently used first. Add one with POST /payout-account.",
+    "operationId": "list_recipients_api_v1_wallet_recipients_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/PayoutRecipientResponse"
+         },
+         "type": "array",
+         "title": "Response List Recipients Api V1 Wallet Recipients Get"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/wallet/recipients/{recipient_id}": {
+   "delete": {
+    "tags": [
+     "Wallet"
+    ],
+    "summary": "Remove Recipient",
+    "description": "Forget a saved account. The one withdrawals currently go to can't be removed.",
+    "operationId": "remove_recipient_api_v1_wallet_recipients__recipient_id__delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "recipient_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Recipient Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/wallet/transactions/{transaction_id}": {
    "get": {
     "tags": [
@@ -7942,6 +8070,17 @@
        }
       ],
       "title": "Withdrawal Id"
+     },
+     "narration": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Narration"
      },
      "failure_reason": {
       "anyOf": [
@@ -11219,6 +11358,71 @@
     "type": "object",
     "title": "HTTPValidationError"
    },
+   "InsightCategory": {
+    "properties": {
+     "kind": {
+      "type": "string",
+      "enum": [
+       "funding",
+       "loan_payout",
+       "repayment",
+       "withdrawal",
+       "investment",
+       "investment_payout"
+      ],
+      "title": "Kind"
+     },
+     "direction": {
+      "type": "string",
+      "enum": [
+       "in",
+       "out"
+      ],
+      "title": "Direction"
+     },
+     "amount": {
+      "type": "number",
+      "title": "Amount"
+     },
+     "count": {
+      "type": "integer",
+      "title": "Count"
+     }
+    },
+    "type": "object",
+    "required": [
+     "kind",
+     "direction",
+     "amount",
+     "count"
+    ],
+    "title": "InsightCategory"
+   },
+   "InsightPoint": {
+    "properties": {
+     "start": {
+      "type": "string",
+      "format": "date",
+      "title": "Start"
+     },
+     "money_in": {
+      "type": "number",
+      "title": "Money In"
+     },
+     "money_out": {
+      "type": "number",
+      "title": "Money Out"
+     }
+    },
+    "type": "object",
+    "required": [
+     "start",
+     "money_in",
+     "money_out"
+    ],
+    "title": "InsightPoint",
+    "description": "Money in and out in one bucket: a day (1m) or a month (6m, 12m)."
+   },
    "InstallmentStatus": {
     "type": "string",
     "enum": [
@@ -11233,7 +11437,8 @@
     "type": "string",
     "enum": [
      "flat",
-     "reducing_balance"
+     "reducing_balance",
+     "one_off"
     ],
     "title": "InterestMethod"
    },
@@ -12264,6 +12469,10 @@
       "type": "string",
       "title": "Interest Rate Pct Monthly"
      },
+     "interest_method": {
+      "$ref": "#/components/schemas/InterestMethod",
+      "default": "flat"
+     },
      "max_tenure_days": {
       "anyOf": [
        {
@@ -13091,6 +13300,69 @@
     "title": "PayoutAccountSummary",
     "description": "Where withdrawals go. The account number is masked to its last four digits."
    },
+   "PayoutRecipientResponse": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "bank_code": {
+      "type": "string",
+      "title": "Bank Code"
+     },
+     "bank_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bank Name"
+     },
+     "account_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Account Name"
+     },
+     "account_number_masked": {
+      "type": "string",
+      "title": "Account Number Masked"
+     },
+     "current": {
+      "type": "boolean",
+      "title": "Current"
+     },
+     "last_used_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Used At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "bank_code",
+     "account_number_masked",
+     "current"
+    ],
+    "title": "PayoutRecipientResponse",
+    "description": "A saved account the customer can send (withdraw) to. The number is masked."
+   },
    "PendingApprovalResponse": {
     "properties": {
      "id": {
@@ -13494,7 +13766,8 @@
      "daily",
      "weekly",
      "monthly",
-     "salary_date"
+     "salary_date",
+     "end_of_term"
     ],
     "title": "RepaymentCadence"
    },
@@ -16047,6 +16320,62 @@
     ],
     "title": "WalletFundSessionResponse"
    },
+   "WalletInsightsResponse": {
+    "properties": {
+     "range": {
+      "type": "string",
+      "enum": [
+       "1m",
+       "6m",
+       "12m"
+      ],
+      "title": "Range"
+     },
+     "start": {
+      "type": "string",
+      "format": "date",
+      "title": "Start"
+     },
+     "end": {
+      "type": "string",
+      "format": "date",
+      "title": "End"
+     },
+     "money_in": {
+      "type": "number",
+      "title": "Money In"
+     },
+     "money_out": {
+      "type": "number",
+      "title": "Money Out"
+     },
+     "series": {
+      "items": {
+       "$ref": "#/components/schemas/InsightPoint"
+      },
+      "type": "array",
+      "title": "Series"
+     },
+     "categories": {
+      "items": {
+       "$ref": "#/components/schemas/InsightCategory"
+      },
+      "type": "array",
+      "title": "Categories"
+     }
+    },
+    "type": "object",
+    "required": [
+     "range",
+     "start",
+     "end",
+     "money_in",
+     "money_out",
+     "series",
+     "categories"
+    ],
+    "title": "WalletInsightsResponse"
+   },
    "WalletSummaryResponse": {
     "properties": {
      "available_balance": {
@@ -16277,6 +16606,17 @@
       ],
       "title": "Note"
      },
+     "narration": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Narration"
+     },
      "created_at": {
       "type": "string",
       "format": "date-time",
@@ -16391,6 +16731,32 @@
       "pattern": "^\\d+$",
       "title": "Transaction Pin",
       "description": "Customer's 4-digit transaction PIN"
+     },
+     "recipient_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 64
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Recipient Id",
+      "description": "A saved recipient (GET /wallet/recipients) to send to; it becomes the payout account. Omitted: the current payout account."
+     },
+     "narration": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 100
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Narration",
+      "description": "Optional note the recipient sees on their bank statement, up to 30 characters: letters, digits, spaces and . , ' & ( ) / -"
      }
     },
     "type": "object",

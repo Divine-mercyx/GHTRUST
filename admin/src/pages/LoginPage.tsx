@@ -30,7 +30,7 @@ function BrandLogo() {
       </div>
       <div>
         <p className="text-sm font-bold text-navy tracking-tight">GH Trust</p>
-        <p className="text-xs text-slate-500">Microfinance Bank</p>
+        <p className="text-xs text-slate-500">International Ltd</p>
       </div>
     </div>
   )

@@ -37,6 +37,9 @@ const TX_ICON: Record<WalletTransaction['kind'], keyof typeof Ionicons.glyphMap>
 /** "******6789" → "•••• 6789", short enough to fit next to a bank name. */
 export const shortAccount = (text: string) => text.replace(/\*+(\d{4})/, '•••• $1');
 
+const RECEIVED = { label: 'Received', tone: 'success' } as const;
+const SENT = { label: 'Sent', tone: 'neutral' } as const;
+
 export const transactionStatus = (s: WalletTransaction['status']) => TX_STATUS[s] ?? TX_STATUS.pending;
 export const transactionIcon = (k: WalletTransaction['kind']) => TX_ICON[k] ?? 'swap-vertical';
 
@@ -58,7 +61,8 @@ export function fromTransaction(tx: WalletTransaction): Activity {
     amount: String(tx.amount),
     // A failed withdrawal never left, so it isn't shown as money out.
     direction: tx.direction === 'in' ? 'in' : tx.status === 'failed' ? 'none' : 'out',
-    status: transactionStatus(tx.status),
+    // Lists say "Received" / "Sent" for money that has moved; receipts keep "Completed".
+    status: tx.status === 'completed' ? (tx.direction === 'in' ? RECEIVED : SENT) : transactionStatus(tx.status),
     at: tx.created_at,
     href: `/transactions/${tx.id}`,
   };

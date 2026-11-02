@@ -93,4 +93,5 @@ export const CADENCE: Record<string, string> = {
   weekly: 'Weekly',
   monthly: 'Monthly',
   salary_date: 'On salary day',
+  end_of_term: 'One payment at the end',
 };

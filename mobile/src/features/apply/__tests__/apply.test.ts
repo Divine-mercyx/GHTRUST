@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import type { FieldDef } from '../config';
-import { maxTenureMonths, pagesFor, submitProblems } from '../config';
+import { guarantorOptional, maxTenureMonths, pagesFor, submitProblems } from '../config';
 import { isPhone, payloadFor, validateField, validateGuarantors, type Draft } from '../draft';
 
 const field = (kind: FieldDef['kind'], extra: Partial<FieldDef> = {}): FieldDef =>
@@ -77,3 +77,31 @@ describe('payloadFor', () => {
     expect(payload.universal_form).not.toHaveProperty('purpose');
   });
 });
+
+describe('website catalogue', () => {
+  it('asks LPO applicants when their client pays, repaid in one payment', () => {
+    const request = pagesFor(['universal_form', 'lpo_details'], null).find((p) => p.id === 'request')!;
+    const tenure = request.fields!.find((f) => f.key === 'tenure_months')!;
+    expect(tenure.label).toMatch(/client pay/);
+    expect(pagesFor(['lpo_details'], null).map((p) => p.id)).toContain('lpo');
+    expect(pagesFor(['group_details'], null).map((p) => p.id)).toContain('group');
+  });
+  it('makes the guarantor optional below the business loan amount', () => {
+    const rules = { security_from_amount: 100000 };
+    expect(guarantorOptional(rules)).toBe(true);
+    expect(guarantorOptional({})).toBe(false);
+    expect(validateGuarantors([], true)).toBeNull();
+    expect(validateGuarantors([])).toBe('Add at least one guarantor.');
+    const guarantor = pagesFor(['guarantor_collateral'], null, rules).find((p) => p.id === 'guarantor')!;
+    expect(guarantor.subtitle).toMatch(/Optional below ₦100,000/);
+  });
+  it('points the new submit checks at the right screen', () => {
+    const problems = submitProblems([
+      'For loans of ₦100,000 and above, add a guarantor with their ID and photo, or upload your collateral documents',
+      'A group needs between 2 and 15 members',
+      'LPO details are required: the issuing organisation and the contract value',
+    ]);
+    expect(problems.map((p) => p.page)).toEqual(['guarantor', 'group', 'lpo']);
+  });
+});
+

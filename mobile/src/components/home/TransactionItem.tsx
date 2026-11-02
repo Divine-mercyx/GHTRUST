@@ -7,7 +7,7 @@ import { Badge, toneColor } from '@/components/Badge';
 import { Text } from '@/components/Text';
 import { activityWhen, type Activity } from '@/lib/activity';
 import { naira } from '@/lib/format';
-import { colors, radius, space } from '@/theme/tokens';
+import { colors, space } from '@/theme/tokens';
 
 import { PressableScale } from './PressableScale';
 
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-  icon: { width: 42, height: 42, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  icon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   body: { flex: 1, gap: 2 },
   side: { alignItems: 'flex-end', gap: 4, maxWidth: '42%' },
 });

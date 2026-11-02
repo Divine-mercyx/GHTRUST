@@ -113,3 +113,107 @@ def test_dev_code_is_never_exposed_outside_local_development():
     assert not Settings(
         app_env="development", sms_mock=True, otp_dev_echo=False
     ).expose_dev_otp
+
+
+# ── Dojah Messaging ─────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def dojah_env(monkeypatch):
+    monkeypatch.setenv("SMS_MOCK", "false")
+    monkeypatch.setenv("SMS_PROVIDER", "dojah")
+    monkeypatch.setenv("DOJAH_APP_ID", "app-123")
+    monkeypatch.setenv("DOJAH_SECRET_KEY", "prod_sk_test")
+    monkeypatch.setenv("DOJAH_SENDER_ID", "GHTrust")
+    monkeypatch.setenv("DOJAH_BASE_URL", "https://dojah.example")
+    refresh_settings()
+
+
+def _dojah(monkeypatch, entity: dict, seen: list, status: int = 200):
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(status, json={"entity": entity} if status < 400 else {"error": "Insufficient wallet"})
+
+    _route(monkeypatch, handler)
+
+
+async def test_dojah_delivers_our_code_through_its_otp_route(dojah_env, monkeypatch):
+    seen: list[httpx.Request] = []
+    _dojah(monkeypatch, {"reference_id": "ref-1", "destination": "2348027218077", "status": "SMS sent"}, seen)
+    sender = sms.get_sms_sender()
+    assert isinstance(sender, sms.DojahSmsSender)
+    await sender.send_otp("08027218077", "482917", "login")
+
+    request = seen[0]
+    assert str(request.url) == "https://dojah.example/api/v1/messaging/otp"
+    assert request.headers["Authorization"] == "prod_sk_test"  # as-is, not Bearer
+    assert request.headers["AppId"] == "app-123"
+    body = json.loads(request.content)
+    assert body == {
+        "sender_id": "GHTrust",
+        "destination": "2348027218077",
+        "channel": "sms",
+        "length": 6,
+        "expiry": 10,
+        "priority": True,
+        "otp": 482917,  # GH Trust's code: we still check it ourselves
+    }
+
+
+async def test_dojah_sms_validate_and_status(dojah_env, monkeypatch):
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        path = request.url.path
+        if path.endswith("/sms"):
+            entity = {"status": "Sent", "message_id": "dj_1", "reference_id": "r"}
+        elif path.endswith("/get_status"):
+            entity = {"status": "delivered"}
+        else:  # /otp/validate
+            entity = {"valid": request.url.params["code"] == "1234"}
+        return httpx.Response(200, json={"entity": entity})
+
+    _route(monkeypatch, handler)
+    api = sms.DojahMessaging()
+
+    sent = await api.send_sms("+2348027218077", "Your loan is approved")
+    assert sent["message_id"] == "dj_1"
+    assert json.loads(seen[-1].content)["destination"] == "2348027218077"
+
+    assert await api.message_status("dj_1") == "DELIVERED"
+    assert seen[-1].url.params["message_id"] == "dj_1"
+
+    assert await api.validate_otp("ref-1", "1234") is True
+    assert seen[-1].url.params["reference_id"] == "ref-1"
+    assert await api.validate_otp("ref-1", "9999") is False
+
+
+@pytest.mark.parametrize("status", [401, 402, 422])
+async def test_dojah_rejection_is_a_clean_503(dojah_env, monkeypatch, status):
+    _dojah(monkeypatch, {}, [], status=status)
+    with pytest.raises(AppError) as exc:
+        await sms.get_sms_sender().send_otp("08027218077", "482917", "login")
+    assert exc.value.status_code == 503 and exc.value.code == "SMS_UNAVAILABLE"
+
+
+def test_dojah_without_a_sender_id_fails_loudly(dojah_env, monkeypatch):
+    monkeypatch.setenv("DOJAH_SENDER_ID", "")
+    refresh_settings()
+    assert isinstance(sms.get_sms_sender(), sms.UnavailableSmsSender)
+    errors = "\n".join(
+        Settings(app_env="production", sms_mock=False, sms_provider="dojah", dojah_app_id="a").production_config_errors()
+    )
+    assert "DOJAH_SENDER_ID" in errors
+
+
+async def test_login_codes_go_through_dojah_and_are_checked_by_us(dojah_env, monkeypatch, fake_redis):
+    from app.core.rate_limit import OtpService
+
+    seen: list[httpx.Request] = []
+    _dojah(monkeypatch, {"reference_id": "ref-9"}, seen)
+    otp = OtpService(fake_redis)
+    await otp.send("login", "+2348027218077", "+2348027218077")
+    code = str(json.loads(seen[0].content)["otp"])
+    assert len(code) == 6 and code[0] != "0"
+    assert await otp.verify("login", "+2348027218077", code) is True

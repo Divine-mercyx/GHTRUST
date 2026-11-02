@@ -16,7 +16,7 @@ _INSECURE_SECRETS = frozenset(
 
 
 
-SUPPORTED_SMS_PROVIDERS = frozenset({"termii"})
+SUPPORTED_SMS_PROVIDERS = frozenset({"termii", "dojah"})
 # Optional modules that are fully built and may be switched on in production.
 LIVE_FEATURES = ("wallet", "investments")
 
@@ -118,6 +118,10 @@ class Settings(BaseSettings):
     dojah_app_id: str = ""
     dojah_secret_key: str = ""
     dojah_mock: bool = True  # Use sandbox mock when keys missing or mock=true
+    # Dojah Messaging (SMS_PROVIDER=dojah): a sender ID registered and approved on Dojah, and
+    # the channel (sms, whatsapp or voice). Uses the same App ID / secret key as above.
+    dojah_sender_id: str = ""
+    dojah_sms_channel: str = "sms"
     # Mock mode only: the phone number the sandbox BVN identity reports, so you can
     # register in development and receive/enter codes for your own number.
     dojah_mock_phone: str = ""
@@ -297,9 +301,13 @@ class Settings(BaseSettings):
         elif not self.sms_provider:
             errors.append("SMS_PROVIDER must be set when SMS_MOCK=false")
         elif self.sms_provider.strip().lower() not in SUPPORTED_SMS_PROVIDERS:
-            errors.append(f"SMS_PROVIDER '{self.sms_provider}' is not supported (use: termii)")
-        elif not (self.termii_api_key and self.termii_sender_id):
+            errors.append(f"SMS_PROVIDER '{self.sms_provider}' is not supported (use: termii or dojah)")
+        elif self.sms_provider.strip().lower() == "termii" and not (self.termii_api_key and self.termii_sender_id):
             errors.append("Termii needs TERMII_API_KEY and TERMII_SENDER_ID")
+        elif self.sms_provider.strip().lower() == "dojah" and not (
+            self.dojah_app_id and self.dojah_secret_key and self.dojah_sender_id
+        ):
+            errors.append("Dojah messaging needs DOJAH_APP_ID, DOJAH_SECRET_KEY and DOJAH_SENDER_ID")
         if self.dojah_mock or not self.dojah_enabled:
             errors.append("Dojah must be live: set DOJAH_APP_ID, DOJAH_SECRET_KEY and DOJAH_MOCK=false")
         if not self.payment_rail_enabled:

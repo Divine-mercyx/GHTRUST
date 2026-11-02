@@ -319,6 +319,7 @@ class MonnifyClient:
         account_number: str,
         account_name: str,
         narration: str,
+        source_narration: str | None = None,  # Monnify has a single narration (the recipient's)
         currency: str = "NGN",
     ) -> DisbursementResult:
         if self._use_mock:

@@ -13,7 +13,7 @@ import { Screen } from '@/components/Screen';
 import { Banner, CardSkeleton, ErrorState, ProgressBar } from '@/components/States';
 import { Text } from '@/components/Text';
 import { BankPage, bankComplete } from '@/features/apply/BankPage';
-import { pagesFor, type PageId, type WizardPage } from '@/features/apply/config';
+import { guarantorOptional, pagesFor, type PageId, type WizardPage } from '@/features/apply/config';
 import { DocumentChecklist, documentsComplete } from '@/features/apply/DocumentChecklist';
 import { draftFrom, payloadFor, validateGuarantors, validatePage, type Draft } from '@/features/apply/draft';
 import { FieldsPage } from '@/features/apply/FieldsPage';
@@ -56,10 +56,13 @@ export default function ApplyWizardRoute() {
   return <Wizard application={app.data} product={product} />;
 }
 
-function pageValid(page: WizardPage, draft: Draft, application: Application): boolean {
+/** The product's rules as plain values (the API types them loosely). */
+const rulesOf = (product: LoanProduct) => (product.eligibility_rules ?? {}) as Record<string, unknown>;
+
+function pageValid(page: WizardPage, draft: Draft, application: Application, product: LoanProduct): boolean {
   if (page.fields) return Object.keys(validatePage(page.fields, draft)).length === 0;
   if (page.id === 'bank') return bankComplete(draft);
-  if (page.id === 'guarantor') return !validateGuarantors(draft.guarantors);
+  if (page.id === 'guarantor') return !validateGuarantors(draft.guarantors, guarantorOptional(rulesOf(product)));
   if (page.id === 'documents') return documentsComplete(application);
   return false;
 }
@@ -67,8 +70,8 @@ function pageValid(page: WizardPage, draft: Draft, application: Application): bo
 function Wizard({ application, product }: { application: Application; product: LoanProduct }) {
   const queryClient = useQueryClient();
   const pages = useMemo(
-    () => pagesFor(product.workflow_steps, product.max_tenure_days),
-    [product.workflow_steps, product.max_tenure_days],
+    () => pagesFor(product.workflow_steps, product.max_tenure_days, rulesOf(product)),
+    [product],
   );
   const [draft, setDraft] = useState<Draft>(() => draftFrom(application));
   const [index, setIndex] = useState(() => {
@@ -77,7 +80,7 @@ function Wizard({ application, product }: { application: Application; product: L
     // A returning draft resumes at the first unfinished screen from where they left off.
     const from = Math.max(0, pages.findIndex((p) => p.stepIndex >= application.step));
     const initial = draftFrom(application);
-    const firstIncomplete = pages.findIndex((p, i) => i >= from && !pageValid(p, initial, application));
+    const firstIncomplete = pages.findIndex((p, i) => i >= from && !pageValid(p, initial, application, product));
     return firstIncomplete >= 0 ? firstIncomplete : from;
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -152,7 +155,7 @@ function Wizard({ application, product }: { application: Application; product: L
       return;
     }
     if (page.id === 'guarantor') {
-      const problem = validateGuarantors(draft.guarantors);
+      const problem = validateGuarantors(draft.guarantors, guarantorOptional(rulesOf(product)));
       if (problem) {
         setPageError(problem);
         return;
