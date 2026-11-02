@@ -20,6 +20,8 @@ export default function TabsLayout() {
       tabBar={(props) => <TabBar {...props} hidden={hidden} />}
       screenOptions={{
         headerShown: false,
+        // A short slide between tabs.
+        animation: 'shift',
         sceneStyle: { backgroundColor: colors.surface },
       }}>
       <Tabs.Screen name="index" options={{ title: 'Home' }} />

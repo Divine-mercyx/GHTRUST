@@ -42,6 +42,9 @@ export type PayoutAccount = S['PayoutAccountSummary'];
 export type PayoutAccountSaved = S['PayoutAccountSavedResponse'];
 export type Withdrawal = S['WithdrawalResponse'];
 export type WalletTransaction = S['WalletTransactionResponse'];
+export type PayoutRecipient = S['PayoutRecipientResponse'];
+export type WalletInsights = S['WalletInsightsResponse'];
+export type InsightRange = WalletInsights['range'];
 export type WalletTransactionPage = S['WalletTransactionPage'];
 export type TransactionDirection = 'in' | 'out';
 

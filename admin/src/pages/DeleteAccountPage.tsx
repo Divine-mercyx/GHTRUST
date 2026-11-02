@@ -46,7 +46,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 const DELETED = [
   'Your sign-in on every phone, saved phones and notifications',
   'Your PINs, profile photo and BVN photo',
-  'Your contact details, address and payout bank account',
+  'Your contact details, address and saved bank accounts',
   'Unfinished loan applications and their documents',
   'The text of your support messages',
 ]
@@ -95,7 +95,7 @@ export function DeleteAccountPage() {
     <div className="min-h-screen bg-slate-50 px-4 py-10">
       <div className="mx-auto max-w-xl space-y-6">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-navy flex items-center justify-center text-white font-bold text-sm">GH</div>
+          <img src="/logo.png" alt="GH Trust" className="h-10 w-10 rounded-lg border border-slate-200 bg-white p-1" />
           <div>
             <p className="text-sm font-bold text-navy tracking-tight">GH Trust</p>
             <p className="text-xs text-slate-500">Delete your account</p>

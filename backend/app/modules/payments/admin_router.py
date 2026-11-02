@@ -18,6 +18,7 @@ from app.modules.payments.models import (
     PaymentDirection,
     PaymentProvider,
     PaymentTransaction,
+    WithdrawalRequest,
 )
 from app.modules.users.models import Customer
 
@@ -37,6 +38,8 @@ class AdminTransactionResponse(BaseModel):
     customer_name: str | None
     application_id: str | None
     withdrawal_id: str | None
+    # The customer's note on a withdrawal, as sent to the recipient's bank.
+    narration: str | None = None
     failure_reason: str | None
     created_at: datetime
     updated_at: datetime
@@ -74,8 +77,9 @@ async def list_transactions(
     total = await db.scalar(select(func.count()).select_from(PaymentTransaction).where(*conditions))
     rows = (
         await db.execute(
-            select(PaymentTransaction, Customer.first_name, Customer.last_name)
+            select(PaymentTransaction, Customer.first_name, Customer.last_name, WithdrawalRequest.narration)
             .outerjoin(Customer, Customer.id == PaymentTransaction.customer_id)
+            .outerjoin(WithdrawalRequest, WithdrawalRequest.id == PaymentTransaction.withdrawal_id)
             .where(*conditions)
             .order_by(PaymentTransaction.created_at.desc())
             .limit(limit)
@@ -96,11 +100,12 @@ async def list_transactions(
             customer_name=" ".join(p for p in (first, last) if p) or None,
             application_id=tx.application_id,
             withdrawal_id=tx.withdrawal_id,
+            narration=narration,
             failure_reason=tx.failure_reason,
             created_at=tx.created_at,
             updated_at=tx.updated_at,
         )
-        for tx, first, last in rows
+        for tx, first, last, narration in rows
     ]
     return Page[AdminTransactionResponse](items=items, total=int(total or 0), limit=limit, offset=offset)
 

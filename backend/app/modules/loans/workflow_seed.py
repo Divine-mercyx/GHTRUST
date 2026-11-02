@@ -11,7 +11,7 @@ from app.modules.admin.permissions import (
     LOAN_REVIEW,
     LOAN_VERIFY_DOCS,
 )
-from app.modules.loans.constants import ASSET_LOAN, BUSINESS_LOAN, PAYDAY_LOAN, STUDY_LOAN
+from app.modules.loans.constants import ASSET_LOAN, BUSINESS_LOAN, CLUSTER_LOAN, LPO_LOAN, PAYDAY_LOAN, STUDY_LOAN
 from app.modules.loans.models import LoanProduct
 from app.modules.loans.workflow_service import WorkflowService
 
@@ -60,6 +60,18 @@ DEFAULT_PRODUCT_WORKFLOWS: dict[str, list[dict]] = {
     ASSET_LOAN: [
         {"name": "Document verification", "role": "Loan Officer"},
         {"name": "Asset & collateral review", "role": "Credit Analyst"},
+        {"name": "Branch approval", "role": "Branch Manager"},
+        {"name": "Disbursement", "role": "Operations Officer"},
+    ],
+    LPO_LOAN: [
+        {"name": "Document verification", "role": "Loan Officer"},
+        {"name": "LPO / invoice verification", "role": "Credit Analyst"},
+        {"name": "Branch approval", "role": "Branch Manager"},
+        {"name": "Disbursement", "role": "Operations Officer"},
+    ],
+    CLUSTER_LOAN: [
+        {"name": "Group & document verification", "role": "Loan Officer"},
+        {"name": "Group credit assessment", "role": "Credit Analyst"},
         {"name": "Branch approval", "role": "Branch Manager"},
         {"name": "Disbursement", "role": "Operations Officer"},
     ],

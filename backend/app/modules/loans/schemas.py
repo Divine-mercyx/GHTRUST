@@ -66,6 +66,9 @@ class InterestMethod(str, enum.Enum):
     FLAT = "flat"
     # Amortising: interest charged on the declining principal balance.
     REDUCING_BALANCE = "reducing_balance"
+    # One charge for the whole loan (principal x rate, whatever the tenure): LPO / invoice
+    # financing's "7% back-end charge, payable when the transaction is completed".
+    ONE_OFF = "one_off"
 
 
 class InstallmentStatus(str, enum.Enum):
@@ -88,6 +91,8 @@ class RepaymentCadence(str, enum.Enum):
     WEEKLY = "weekly"
     MONTHLY = "monthly"
     SALARY_DATE = "salary_date"
+    # One repayment at the end of the tenure (e.g. when an LPO / invoice is paid).
+    END_OF_TERM = "end_of_term"
 
 
 class UniversalFormData(BaseModel):
@@ -300,6 +305,8 @@ class LoanProductResponse(BaseModel):
     is_active: bool
     processing_fee_pct: Decimal
     interest_rate_pct_monthly: Decimal
+    # flat / reducing_balance: the rate is per month; one_off: charged once for the whole loan.
+    interest_method: InterestMethod = InterestMethod.FLAT
     max_tenure_days: int | None
     default_penalty_pct_daily: Decimal | None
     repayment_cadence_options: list[str]

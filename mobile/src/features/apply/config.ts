@@ -28,6 +28,8 @@ export type PageId =
   | 'student'
   | 'guardian'
   | 'asset'
+  | 'lpo'
+  | 'group'
   | 'guarantor'
   | 'documents'
   | 'review';
@@ -169,6 +171,35 @@ export const PAGES: Record<PageId, PageDef> = {
       product('vendor_name', 'Seller / vendor', 'text'),
     ],
   },
+  lpo: {
+    id: 'lpo',
+    title: 'The LPO or invoice',
+    subtitle: 'Only verified orders, contracts and invoices from reputable organisations qualify.',
+    fields: [
+      product('issuing_organisation', 'Who issued it?', 'text', { required: true, placeholder: 'e.g. Lagos State Ministry of Health' }),
+      product('document_type', 'Type', 'select', { required: true, options: ['Local Purchase Order (LPO)', 'Supply contract', 'Invoice'] }),
+      product('lpo_reference', 'LPO / invoice number', 'text'),
+      product('contract_value', 'Value of the order or contract', 'money', { required: true, min: 1 }),
+      product('expected_payment', 'When will they pay you?', 'text', { placeholder: 'e.g. 60 days after delivery' }),
+      product('payment_domiciliation', 'Will they pay into your GH Trust account?', 'select', {
+        options: ['Yes, payment is domiciled with GH Trust', 'No'],
+        hint: 'If not, we may ask for collateral.',
+      }),
+    ],
+  },
+  group: {
+    id: 'group',
+    title: 'Your group',
+    subtitle: 'Members must know and trust one another, and share responsibility for repayment.',
+    fields: [
+      product('group_name', 'Group name', 'text', { required: true, placeholder: 'e.g. Oyingbo Market Women' }),
+      product('group_size', 'Number of members', 'integer', { required: true, min: 2, max: 15, hint: 'Up to 15 members.' }),
+      product('group_leader_name', 'Group leader / coordinator', 'name', { required: true }),
+      product('group_leader_phone', 'Leader’s phone number', 'phone'),
+      product('market_location', 'Market or trading location', 'multiline', { required: true }),
+      product('trade_type', 'What do members sell?', 'text', { placeholder: 'e.g. Foodstuff, fabrics' }),
+    ],
+  },
   guarantor: {
     id: 'guarantor',
     title: 'Guarantor',
@@ -193,6 +224,8 @@ const STEP_PAGES: Record<string, PageId[]> = {
   student_school_details: ['student'],
   guardian_details: ['guardian'],
   asset_details: ['asset'],
+  lpo_details: ['lpo'],
+  group_details: ['group'],
   guarantor_collateral: ['guarantor'],
   documents: ['documents'],
   review_submit: ['review'],
@@ -208,22 +241,42 @@ export function maxTenureMonths(maxTenureDays: number | null | undefined): numbe
   return Math.max(1, Math.floor(maxTenureDays / DAYS_PER_MONTH));
 }
 
+/** Products where a guarantor is one option (or collateral), only needed from an amount up. */
+export function guarantorOptional(rules: Record<string, unknown> | null | undefined): boolean {
+  return rules?.security_from_amount != null;
+}
+
 /**
  * Screens for a product, each tagged with its backend step (1-based, for `step`).
  * The tenure field is capped at the product's own limit, so a customer can't submit a
  * tenure that staff would later be unable to disburse.
  */
-export function pagesFor(workflowSteps: string[], maxTenureDays?: number | null): WizardPage[] {
+export function pagesFor(
+  workflowSteps: string[],
+  maxTenureDays?: number | null,
+  rules?: Record<string, unknown> | null,
+): WizardPage[] {
   const maxMonths = maxTenureMonths(maxTenureDays);
-  const withLimits = (page: PageDef): PageDef =>
-    page.fields
-      ? {
-          ...page,
-          fields: page.fields.map((f) =>
-            f.key === 'tenure_months' ? { ...f, max: maxMonths, hint: `Up to ${maxMonths} month${maxMonths === 1 ? '' : 's'}.` } : f,
-          ),
-        }
-      : page;
+  // LPO financing is repaid in one payment when the client pays the invoice.
+  const oneOff = workflowSteps.includes('lpo_details');
+  const securityFrom = Number(rules?.security_from_amount ?? 0);
+  const tenure = (f: FieldDef): FieldDef => ({
+    ...f,
+    label: oneOff ? 'When will your client pay? (months)' : f.label,
+    max: maxMonths,
+    hint: oneOff
+      ? 'You repay in one payment at the end of this period.'
+      : `Up to ${maxMonths} month${maxMonths === 1 ? '' : 's'}.`,
+  });
+  const withLimits = (page: PageDef): PageDef => {
+    if (page.id === 'guarantor' && securityFrom) {
+      return {
+        ...page,
+        subtitle: `Optional below ₦${securityFrom.toLocaleString()}. From ₦${securityFrom.toLocaleString()}, add a guarantor here or upload your collateral documents.`,
+      };
+    }
+    return page.fields ? { ...page, fields: page.fields.map((f) => (f.key === 'tenure_months' ? tenure(f) : f)) } : page;
+  };
   const pages: WizardPage[] = [];
   workflowSteps.forEach((step, i) => {
     for (const id of STEP_PAGES[step] ?? []) pages.push({ ...withLimits(PAGES[id]), stepIndex: i + 1 });
@@ -271,6 +324,7 @@ export function submitProblems(errors: string[]): SubmitProblem[] {
     const lower = e.toLowerCase();
     if (field) add(MISSING_FIELD[field[1]] ?? { text: 'Some of your details are missing.', page: 'about' });
     else if (doc) add({ text: `Upload your ${doc[1].charAt(0).toLowerCase()}${doc[1].slice(1)}.`, page: 'documents' });
+    else if (lower.includes('for loans of')) add({ text: 'This amount needs a guarantor (with their ID and photo) or your collateral documents.', page: 'guarantor' });
     else if (lower.includes('guarantor')) add({ text: 'Add at least one guarantor.', page: 'guarantor' });
     else if (lower.includes('3 years')) add({ text: 'Business loans need a business that has run for at least 3 years.', page: 'business' });
     else if (lower.includes('trade type')) add({ text: 'Tell us what your business sells.', page: 'business' });
@@ -278,6 +332,8 @@ export function submitProblems(errors: string[]): SubmitProblem[] {
     else if (lower.includes('student') || lower.includes('school')) add({ text: 'Add the student’s and school’s details.', page: 'student' });
     else if (lower.includes('tenure')) add({ text: 'Choose a shorter repayment period for this loan.', page: 'request' });
     else if (lower.includes('asset')) add({ text: 'Describe the asset and add its price.', page: 'asset' });
+    else if (lower.includes('issuing organisation')) add({ text: 'Add who issued the LPO and its value.', page: 'lpo' });
+    else if (lower.includes('group')) add({ text: 'Check your group’s name, leader and number of members (2 to 15).', page: 'group' });
     else add({ text: 'Some details are missing. Please check each step.', page: null });
   }
   return out;

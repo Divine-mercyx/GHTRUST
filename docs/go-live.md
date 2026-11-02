@@ -19,7 +19,7 @@ types match the backend. Investments, debit card top-ups and live support chat a
 
 | # | Item | Why it blocks |
 |---|---|---|
-| 1 | Termii API key + approved sender ID | No SMS codes = nobody can sign up or sign in |
+| 1 | Dojah sender ID registered for messaging (or a Termii key + sender ID) | No SMS codes = nobody can sign up or sign in |
 | 2 | Dojah App ID + secret key, funded wallet | BVN lookup and face check |
 | 3 | Live payment provider keys + webhook secret (Monnify now; Stanbic later, see below) | Wallet funding, payouts, disbursement, card top-ups |
 | 3a | Firebase project (`google-services.json` + FCM key) | Push notifications on Android |
@@ -65,8 +65,9 @@ Generate secrets with `python -c "import secrets; print(secrets.token_urlsafe(48
 | `CORS_ORIGINS` | the admin portal origin, `https://` only, e.g. `https://admin.ghtrust.ng` |
 | `ENABLE_API_DOCS` | `false` |
 | `UPLOAD_DIR` | `/app/uploads` (the volume) |
-| `SMS_MOCK` / `SMS_PROVIDER` | `false` / `termii` |
-| `TERMII_API_KEY`, `TERMII_SENDER_ID`, `TERMII_BASE_URL` | from the Termii dashboard; `TERMII_CHANNEL=dnd` |
+| `SMS_MOCK` / `SMS_PROVIDER` | `false` / `dojah` (or `termii`) |
+| `DOJAH_SENDER_ID`, `DOJAH_SMS_CHANNEL` | with `SMS_PROVIDER=dojah`: a sender ID registered on the Dojah dashboard (Messaging → Sender IDs) and `sms`. Uses the same Dojah keys as the BVN checks. Prove delivery with `python scripts/sms_check.py --to <your phone>` |
+| `TERMII_API_KEY`, `TERMII_SENDER_ID`, `TERMII_BASE_URL` | only with `SMS_PROVIDER=termii`: from the Termii dashboard; `TERMII_CHANNEL=dnd` |
 | `DOJAH_MOCK` / `DOJAH_APP_ID` / `DOJAH_SECRET_KEY` | `false` / from Dojah |
 | `DOJAH_MOCK_PHONE` | **empty** |
 | `OTP_TEST_ECHO` | `false` (codes are never echoed in production anyway, but keep it off) |

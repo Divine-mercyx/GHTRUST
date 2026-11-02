@@ -3,6 +3,7 @@ import { type Tabs } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import type { ComponentProps } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, font, radius, space } from '@/theme/tokens';
@@ -22,7 +23,8 @@ export const TAB_ICONS: Record<string, [IconName, IconName]> = {
 };
 
 /**
- * Floating navy tab bar with rounded ends. The active tab sits on a lighter pill.
+ * Floating white tab bar with rounded ends. The active tab grows into a gold pill with its
+ * label; the others show their icon only (their name is still read out by screen readers).
  * It is laid out (not absolutely positioned), so screens never scroll under it.
  */
 export function TabBar({ state, descriptors, navigation, hidden }: TabBarProps & { hidden: Set<string> }) {
@@ -51,13 +53,17 @@ export function TabBar({ state, descriptors, navigation, hidden }: TabBarProps &
               accessibilityLabel={label}
               onPress={onPress}
               onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
-              style={styles.item}>
-              <View style={[styles.pill, focused && styles.pillOn]}>
-                <Ionicons name={focused ? filled : outline} size={22} color={focused ? colors.white : INACTIVE} />
-              </View>
-              <Text variant="small" color={focused ? colors.white : INACTIVE} style={styles.label} numberOfLines={1}>
-                {label}
-              </Text>
+              style={[styles.item, focused && styles.itemOn]}>
+              <Animated.View layout={LinearTransition.springify().damping(18)} style={[styles.pill, focused && styles.pillOn]}>
+                <Ionicons name={focused ? filled : outline} size={21} color={focused ? colors.navy : INACTIVE} />
+                {focused ? (
+                  <Animated.View entering={FadeIn.duration(180)}>
+                    <Text variant="small" color={colors.navy} style={styles.label} numberOfLines={1}>
+                      {label}
+                    </Text>
+                  </Animated.View>
+                ) : null}
+              </Animated.View>
             </Pressable>
           );
         })}
@@ -66,13 +72,13 @@ export function TabBar({ state, descriptors, navigation, hidden }: TabBarProps &
   );
 }
 
-const INACTIVE = 'rgba(255,255,255,0.6)';
+const INACTIVE = colors.textFaint;
 
 const styles = StyleSheet.create({
   wrap: { backgroundColor: colors.surface, paddingHorizontal: space.md, paddingTop: space.xs },
   bar: {
     flexDirection: 'row',
-    backgroundColor: colors.navy,
+    backgroundColor: colors.card,
     borderRadius: radius.xl,
     paddingVertical: space.xs,
     paddingHorizontal: space.xs,
@@ -80,13 +86,24 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
     ...Platform.select({
-      ios: { shadowColor: colors.navy, shadowOpacity: 0.25, shadowRadius: 16, shadowOffset: { width: 0, height: 8 } },
+      ios: { shadowColor: colors.navy, shadowOpacity: 0.12, shadowRadius: 20, shadowOffset: { width: 0, height: 8 } },
       android: { elevation: 10 },
-      default: { boxShadow: '0 8px 24px rgba(27,47,107,.25)' },
+      default: { boxShadow: '0 8px 24px rgba(27,47,107,.12)' },
     }),
   },
-  item: { flex: 1, alignItems: 'center', gap: 2, minHeight: 52, justifyContent: 'center' },
-  pill: { width: 48, height: 30, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
-  pillOn: { backgroundColor: colors.navySoft },
-  label: { fontFamily: font.semibold, fontSize: 11, lineHeight: 14 },
+  item: { flex: 1, alignItems: 'center', minHeight: 52, justifyContent: 'center' },
+  // The active tab takes more room for its label.
+  itemOn: { flex: 1.9 },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 42,
+    minWidth: 46,
+    paddingHorizontal: space.sm,
+    borderRadius: radius.pill,
+  },
+  pillOn: { backgroundColor: colors.highlight, paddingHorizontal: space.md },
+  label: { fontFamily: font.bold, fontSize: 13, lineHeight: 16 },
 });

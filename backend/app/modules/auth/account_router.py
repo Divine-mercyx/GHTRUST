@@ -38,7 +38,7 @@ OTP_PURPOSE = "account_deletion"
 WILL_DELETE = [
     "Your sign-in on every phone, saved phones and notifications",
     "Your PINs, profile photo and BVN photo",
-    "Your contact details, address and payout bank account",
+    "Your contact details, address and saved bank accounts",
     "Unfinished loan applications and the documents in them",
     "The text of your support messages",
 ]

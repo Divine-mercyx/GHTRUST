@@ -30,6 +30,10 @@ describe('wallet transactions in activity', () => {
     expect(row.href).toBe('/transactions/w_1');
     expect(row.status.label).toBe('Pending');
   });
+  it('labels completed money as received or sent', () => {
+    expect(fromTransaction(tx({ status: 'completed' })).status.label).toBe('Sent');
+    expect(fromTransaction(tx({ status: 'completed', direction: 'in', kind: 'funding' })).status.label).toBe('Received');
+  });
   it("doesn't count a failed withdrawal as money out", () => {
     expect(fromTransaction(tx({ status: 'failed' })).direction).toBe('none');
   });

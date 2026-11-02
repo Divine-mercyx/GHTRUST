@@ -4,6 +4,7 @@ from uuid import uuid4
 
 import structlog
 from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -18,6 +19,7 @@ from app.modules.payments.models import (
     PaymentDirection,
     PaymentProvider,
     PaymentTransaction,
+    PayoutRecipient,
     WithdrawalRequest,
     WithdrawalStatus,
 )
@@ -36,6 +38,10 @@ def _active_provider() -> PaymentProvider:
     if provider == "stanbic":
         return PaymentProvider.STANBIC
     return PaymentProvider.MONNIFY
+
+
+# What our own statement shows for every withdrawal; the recipient sees the customer's note instead.
+WITHDRAWAL_NARRATION = "GH Trust wallet withdrawal"
 
 
 def mask_account_number(number: str) -> str:
@@ -234,10 +240,85 @@ class WalletService:
                 raise HTTPException(status_code=502, detail="Unable to save payout account") from exc
 
         await self.provision_payment_rail(customer)
+        await self._remember_recipient(customer)
         await self.db.flush()
         return customer
 
-    async def request_withdrawal(self, customer: Customer, amount: Decimal) -> WithdrawalRequest:
+    # ── Saved recipients ("Send money") ─────────────────────────────────────
+
+    async def recipients(self, customer: Customer) -> list[PayoutRecipient]:
+        """Saved accounts, most recently used (or added) first."""
+        rows = (
+            await self.db.execute(select(PayoutRecipient).where(PayoutRecipient.customer_id == customer.id))
+        ).scalars()
+        return sorted(rows, key=lambda r: _utc(r.last_used_at or r.created_at), reverse=True)
+
+    async def remove_recipient(self, customer: Customer, recipient_id: str) -> None:
+        recipient = await self._recipient(customer, recipient_id)
+        if self.is_current(customer, recipient):
+            raise AppError(
+                status.HTTP_409_CONFLICT,
+                ErrorCode.RECIPIENT_IN_USE,
+                "This is where withdrawals go now. Choose another account first, then remove it.",
+            )
+        await self.db.delete(recipient)
+        await self.db.flush()
+
+    async def use_recipient(self, customer: Customer, recipient_id: str) -> PayoutRecipient:
+        """Make a saved account the one withdrawals go to (the customer picked it to send to)."""
+        recipient = await self._recipient(customer, recipient_id)
+        customer.payout_bank_code = recipient.bank_code
+        customer.payout_bank_name = recipient.bank_name
+        customer.payout_account_number = recipient.account_number
+        customer.payout_account_name = recipient.account_name
+        customer.paystack_transfer_recipient_code = recipient.recipient_code
+        recipient.last_used_at = datetime.now(timezone.utc)
+        await self.db.flush()
+        return recipient
+
+    @staticmethod
+    def is_current(customer: Customer, recipient: PayoutRecipient) -> bool:
+        return (
+            customer.payout_bank_code == recipient.bank_code
+            and customer.payout_account_number == recipient.account_number
+        )
+
+    async def _recipient(self, customer: Customer, recipient_id: str) -> PayoutRecipient:
+        recipient = await self.db.scalar(
+            select(PayoutRecipient).where(
+                PayoutRecipient.id == recipient_id, PayoutRecipient.customer_id == customer.id
+            )
+        )
+        if recipient is None:
+            raise AppError(status.HTTP_404_NOT_FOUND, ErrorCode.RECIPIENT_NOT_FOUND, "Saved account not found")
+        return recipient
+
+    async def _remember_recipient(self, customer: Customer) -> None:
+        """Keep the payout account just saved in the customer's recipients (once per account)."""
+        if not customer.payout_bank_code or not customer.payout_account_number:
+            return
+        recipient = await self.db.scalar(
+            select(PayoutRecipient).where(
+                PayoutRecipient.customer_id == customer.id,
+                PayoutRecipient.bank_code == customer.payout_bank_code,
+                PayoutRecipient.account_number == customer.payout_account_number,
+            )
+        )
+        if recipient is None:
+            recipient = PayoutRecipient(
+                customer_id=customer.id,
+                bank_code=customer.payout_bank_code,
+                account_number=customer.payout_account_number,
+            )
+            self.db.add(recipient)
+        recipient.bank_name = customer.payout_bank_name
+        recipient.account_name = customer.payout_account_name
+        recipient.recipient_code = customer.paystack_transfer_recipient_code
+        recipient.last_used_at = datetime.now(timezone.utc)
+
+    async def request_withdrawal(
+        self, customer: Customer, amount: Decimal, narration: str | None = None
+    ) -> WithdrawalRequest:
         if amount <= 0:
             raise HTTPException(status_code=422, detail="Amount must be positive")
         if not customer.payout_account_number or not customer.payout_bank_code:
@@ -281,6 +362,7 @@ class WalletService:
             account_name=customer.payout_account_name or customer.full_name,
             recipient_code=customer.paystack_transfer_recipient_code,
             transfer_reference=reference,
+            narration=narration,
             status=WithdrawalStatus.PENDING,
         )
         self.db.add(withdrawal)
@@ -328,7 +410,7 @@ class WalletService:
                     InitiateTransferRequest(
                         amount=naira_to_kobo(withdrawal.amount),
                         recipient=withdrawal.recipient_code or "",
-                        reason="GH Trust wallet withdrawal",
+                        reason=withdrawal.narration or WITHDRAWAL_NARRATION,
                         reference=withdrawal.transfer_reference,
                     )
                 )
@@ -342,7 +424,8 @@ class WalletService:
                     bank_code=withdrawal.bank_code,
                     account_number=withdrawal.account_number,
                     account_name=withdrawal.account_name,
-                    narration="GH Trust wallet withdrawal",
+                    narration=withdrawal.narration or WITHDRAWAL_NARRATION,
+                    source_narration=WITHDRAWAL_NARRATION,
                 )
                 withdrawal.transfer_code = result.transaction_id
                 payment_tx.provider_transaction_id = result.transaction_id or withdrawal.transfer_reference
@@ -377,3 +460,8 @@ class WalletService:
             await notify.withdrawal_failed(self.db, withdrawal)
         await self.db.flush()
         return withdrawal
+
+
+def _utc(dt: datetime) -> datetime:
+    """SQLite hands back naive datetimes; Postgres aware ones."""
+    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt

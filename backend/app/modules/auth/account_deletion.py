@@ -56,6 +56,7 @@ from app.modules.payments.models import (
     CustomerWallet,
     LedgerJournal,
     PaymentTransaction,
+    PayoutRecipient,
     WithdrawalRequest,
     WithdrawalStatus,
 )
@@ -237,7 +238,7 @@ class AccountDeletionService:
             .where(AuthSession.subject_type == SubjectType.CUSTOMER, AuthSession.subject_id == cid)
             .values(push_token=None)
         )
-        for model in (CustomerDevice, DeviceApproval, SelfieAttempt, Notification, LoanDraft):
+        for model in (CustomerDevice, DeviceApproval, SelfieAttempt, Notification, LoanDraft, PayoutRecipient):
             await self.db.execute(delete(model).where(model.customer_id == cid))
 
         draft_ids = await self._delete_drafts(cid)

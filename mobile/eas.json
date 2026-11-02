@@ -11,7 +11,11 @@
       "channel": "development",
       "android": {
         "buildType": "apk"
-      }
+      },
+      "env": {
+        "APP_VARIANT": "development"
+      },
+      "autoIncrement": true
     },
     "preview": {
       "environment": "preview",
@@ -22,7 +26,8 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://ghtrust-production.up.railway.app"
       },
-      "channel": "preview"
+      "channel": "preview",
+      "autoIncrement": true
     },
     "production": {
       "environment": "production",

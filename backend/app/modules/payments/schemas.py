@@ -1,4 +1,5 @@
-from datetime import datetime
+import re
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
@@ -83,11 +84,43 @@ class PayoutAccountSavedResponse(BaseModel):
     payout_account: PayoutAccountSummary
 
 
+# Stanbic hasn't published a narration limit; 30 is our cautious one until they confirm it.
+WITHDRAWAL_NARRATION_MAX = 30
+# Letters, digits, spaces and plain punctuation: what every bank's narration field accepts.
+_NARRATION_CHARS = re.compile(r"[A-Za-z0-9 .,'&()/-]*")
+
+
 class WithdrawRequest(BaseModel):
     amount: Decimal = Field(gt=0, decimal_places=2)
     transaction_pin: str = Field(
         ..., min_length=4, max_length=4, pattern=r"^\d+$", description="Customer's 4-digit transaction PIN"
     )
+    recipient_id: str | None = Field(
+        None,
+        max_length=64,
+        description="A saved recipient (GET /wallet/recipients) to send to; it becomes the payout account. "
+        "Omitted: the current payout account.",
+    )
+    narration: str | None = Field(
+        None,
+        max_length=100,
+        description=f"Optional note the recipient sees on their bank statement, up to {WITHDRAWAL_NARRATION_MAX} "
+        "characters: letters, digits, spaces and . , ' & ( ) / -",
+    )
+
+    @field_validator("narration")
+    @classmethod
+    def validate_narration(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = " ".join(value.split())
+        if not value:
+            return None
+        if len(value) > WITHDRAWAL_NARRATION_MAX:
+            raise ValueError(f"Note can be at most {WITHDRAWAL_NARRATION_MAX} characters")
+        if not _NARRATION_CHARS.fullmatch(value):
+            raise ValueError("Note can only use letters, numbers, spaces and . , ' & ( ) / -")
+        return value
 
     @field_validator("amount")
     @classmethod
@@ -123,8 +156,48 @@ class WalletTransactionResponse(BaseModel):
     loan_product: str | None = None
     # Customer-facing explanation, e.g. why a withdrawal failed and where the money is.
     note: str | None = None
+    # The customer's own note on a withdrawal, as sent to the recipient's bank.
+    narration: str | None = None
     created_at: datetime
     completed_at: datetime | None = None
+
+
+class PayoutRecipientResponse(BaseModel):
+    """A saved account the customer can send (withdraw) to. The number is masked."""
+
+    id: str
+    bank_code: str
+    bank_name: str | None = None
+    account_name: str | None = None
+    account_number_masked: str
+    # The account withdrawals currently go to (can't be removed).
+    current: bool
+    last_used_at: datetime | None = None
+
+
+class InsightPoint(BaseModel):
+    """Money in and out in one bucket: a day (1m) or a month (6m, 12m)."""
+
+    start: date
+    money_in: float
+    money_out: float
+
+
+class InsightCategory(BaseModel):
+    kind: Literal["funding", "loan_payout", "repayment", "withdrawal", "investment", "investment_payout"]
+    direction: Literal["in", "out"]
+    amount: float
+    count: int
+
+
+class WalletInsightsResponse(BaseModel):
+    range: Literal["1m", "6m", "12m"]
+    start: date
+    end: date
+    money_in: float
+    money_out: float
+    series: list[InsightPoint]
+    categories: list[InsightCategory]
 
 
 class WalletTransactionPage(BaseModel):

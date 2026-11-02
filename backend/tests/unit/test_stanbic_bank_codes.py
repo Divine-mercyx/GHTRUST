@@ -132,6 +132,22 @@ class TestStanbicTransfers:
             )
         assert sent.await_args.args[0]["destinationAccountBankCode"] == "999058"
 
+    async def test_recipient_sees_the_customers_note_and_our_statement_ours(self, portal_client):
+        sent = AsyncMock(return_value={"responseCode": "00", "responseMsg": "SUCCESS", "destAcctCredited": "Y"})
+        with patch("app.integrations.stanbic.portal_sandbox.single_transfer", sent):
+            await portal_client.initiate_disbursement(
+                amount=Decimal("5000"),
+                reference="ghtrust_wdr_3",
+                bank_code="058",
+                account_number="0123456789",
+                account_name="Ada Obi",
+                narration="Rent for May",
+                source_narration="GH Trust wallet withdrawal",
+            )
+        payload = sent.await_args.args[0]
+        assert payload["destAcctNarration"] == "Rent for May"
+        assert payload["srcAcctNarration"] == "GH Trust wallet withdrawal"
+
     async def test_unknown_bank_never_reaches_stanbic(self, portal_client):
         sent = AsyncMock(side_effect=AssertionError("must not send"))
         with patch("app.integrations.stanbic.portal_sandbox.single_transfer", sent):

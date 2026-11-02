@@ -14,7 +14,9 @@ from app.modules.payments.schemas import (
     CardFundRequest,
     CardFundResponse,
     PayoutAccountSavedResponse,
+    PayoutRecipientResponse,
     UpdatePayoutAccountRequest,
+    WalletInsightsResponse,
     WalletFundRequest,
     WalletFundSessionResponse,
     WalletSummaryResponse,
@@ -104,6 +106,41 @@ async def list_wallet_transactions(
     return WalletTransactionPage(items=items, next_cursor=next_cursor)
 
 
+@router.get("/insights", response_model=WalletInsightsResponse)
+async def wallet_insights(
+    customer: CurrentCustomer,
+    db: DbSession,
+    range: Literal["1m", "6m", "12m"] = Query("6m", description="Last month (by day), 6 or 12 months (by month)"),  # noqa: A002
+) -> WalletInsightsResponse:
+    """Money in and out of the wallet over a period, for the Insights screen."""
+    return WalletInsightsResponse(**await WalletTransactionService(db).insights(customer.id, range))
+
+
+@router.get("/recipients", response_model=list[PayoutRecipientResponse])
+async def list_recipients(customer: CurrentCustomer, db: DbSession) -> list[PayoutRecipientResponse]:
+    """Saved accounts to send (withdraw) to, most recently used first. Add one with POST /payout-account."""
+    service = WalletService(db)
+    return [_recipient_response(customer, r) for r in await service.recipients(customer)]
+
+
+@router.delete("/recipients/{recipient_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_recipient(recipient_id: str, customer: CurrentCustomer, db: DbSession) -> None:
+    """Forget a saved account. The one withdrawals currently go to can't be removed."""
+    await WalletService(db).remove_recipient(customer, recipient_id)
+
+
+def _recipient_response(customer, recipient) -> PayoutRecipientResponse:
+    return PayoutRecipientResponse(
+        id=recipient.id,
+        bank_code=recipient.bank_code,
+        bank_name=recipient.bank_name,
+        account_name=recipient.account_name,
+        account_number_masked=mask_account_number(recipient.account_number),
+        current=WalletService.is_current(customer, recipient),
+        last_used_at=recipient.last_used_at,
+    )
+
+
 @router.get("/transactions/{transaction_id}", response_model=WalletTransactionResponse)
 async def get_wallet_transaction(
     transaction_id: str, customer: CurrentCustomer, db: DbSession
@@ -153,8 +190,12 @@ async def request_withdrawal(
     idempotency_key: str = Header(..., alias="Idempotency-Key", min_length=8, max_length=64),
 ) -> WithdrawalResponse:
     await SecurityService(db).authorize_transaction(customer, payload.transaction_pin)
+    service = WalletService(db)
+    if payload.recipient_id:
+        # Already validated and saved with the PIN; sending to it makes it the payout account.
+        await service.use_recipient(customer, payload.recipient_id)
     try:
-        withdrawal = await WalletService(db).request_withdrawal(customer, payload.amount)
+        withdrawal = await service.request_withdrawal(customer, payload.amount, payload.narration)
     except LedgerError as exc:
         raise_ledger_http(exc)
     return WithdrawalResponse(

@@ -6,12 +6,13 @@ import { Button } from '@/components/Button';
 import { Card, Row, SectionHeader } from '@/components/Card';
 import { CopyField } from '@/components/CopyField';
 import { TransactionItem } from '@/components/home/TransactionItem';
+import { NavyCard, ON_NAVY } from '@/components/NavyCard';
 import { Screen } from '@/components/Screen';
 import { Banner, CardSkeleton, ErrorState } from '@/components/States';
 import { Text } from '@/components/Text';
 import { fromTransaction, shortAccount } from '@/lib/activity';
 import { naira } from '@/lib/format';
-import { useApplications, useTransactions, useWallet } from '@/lib/queries';
+import { useApplications, useRecipients, useTransactions, useWallet } from '@/lib/queries';
 import { applicationStatus } from '@/lib/status';
 import { colors, font, radius, shadow, space } from '@/theme/tokens';
 
@@ -23,6 +24,7 @@ export default function WalletTab() {
   const wallet = useWallet();
   const history = useTransactions();
   const applications = useApplications();
+  const recipients = useRecipients();
   const incoming = (applications.data?.items ?? []).filter((a) => PAYING_OUT.has(a.status));
   const w = wallet.data;
   const recent = useMemo(
@@ -35,6 +37,7 @@ export default function WalletTab() {
       onRefresh={() => {
         wallet.refetch();
         history.refetch();
+        recipients.refetch();
       }}
       refreshing={wallet.isRefetching}>
       <Text variant="title">Wallet</Text>
@@ -45,16 +48,15 @@ export default function WalletTab() {
         <ErrorState error={wallet.error} onRetry={() => wallet.refetch()} />
       ) : (
         <>
-          <View style={styles.balance}>
-            <View pointerEvents="none" style={styles.glow} />
-            <Text variant="caption" color={colors.cyan}>
-              AVAILABLE BALANCE
+          <NavyCard accessibilityLabel="Available balance" style={{ gap: 4 }}>
+            <Text variant="small" color={ON_NAVY.muted}>
+              Available balance
             </Text>
-            <Text variant="display" color={colors.white}>
+            <Text variant="display" color={colors.white} numberOfLines={1} adjustsFontSizeToFit>
               {naira(w.available_balance, { kobo: true })}
             </Text>
             {w.locked_balance > 0 ? (
-              <Text variant="small" color="rgba(255,255,255,0.75)">
+              <Text variant="small" color={ON_NAVY.muted}>
                 {naira(w.locked_balance)} on its way to your bank
               </Text>
             ) : null}
@@ -62,17 +64,28 @@ export default function WalletTab() {
               <Button
                 title="Add money"
                 icon="add"
+                variant="secondary"
                 onPress={() => router.push('/fund')}
                 style={styles.addMoney}
               />
               <Button
-                title="Withdraw"
-                icon="arrow-up"
+                title="Send"
+                icon="paper-plane-outline"
                 onPress={() => router.push('/withdraw')}
                 style={styles.withdraw}
               />
             </View>
-          </View>
+          </NavyCard>
+
+          <Card style={{ paddingVertical: space.xs }}>
+            <Row
+              icon="stats-chart-outline"
+              title="Insights"
+              subtitle="Money in and out, by month"
+              onPress={() => router.push('/insights')}
+              last
+            />
+          </Card>
 
           {incoming.length > 0 ? (
             <>
@@ -122,25 +135,24 @@ export default function WalletTab() {
             </View>
           )}
 
-          <SectionHeader title="Withdrawals go to" />
+          <SectionHeader title="Saved accounts" />
           <Card style={{ paddingVertical: space.xs }}>
-            {w.payout_account ? (
+            {(recipients.data ?? []).map((r) => (
               <Row
-                icon="business"
-                title={w.payout_account.account_name ?? 'Your account'}
-                subtitle={`${w.payout_account.bank_name ?? 'Bank'} · ${shortAccount(w.payout_account.account_number_masked)}`}
-                onPress={() => router.push('/payout-account')}
-                last
+                key={r.id}
+                icon={r.current ? 'business' : 'business-outline'}
+                title={r.account_name ?? 'Your account'}
+                subtitle={`${r.bank_name ?? 'Bank'} · ${shortAccount(r.account_number_masked)}${r.current ? ' · last used' : ''}`}
+                onPress={() => router.push('/withdraw')}
               />
-            ) : (
-              <Row
-                icon="add-circle-outline"
-                title="Add a bank account"
-                subtitle="Needed before you can withdraw"
-                onPress={() => router.push('/payout-account')}
-                last
-              />
-            )}
+            ))}
+            <Row
+              icon="add-circle-outline"
+              title="Add a bank account"
+              subtitle={recipients.data?.length ? 'Save another account to send to' : 'Needed before you can send money'}
+              onPress={() => router.push('/payout-account')}
+              last
+            />
           </Card>
 
           {w.dva_account_number ? (
@@ -167,19 +179,8 @@ export default function WalletTab() {
 }
 
 const styles = StyleSheet.create({
-  balance: { backgroundColor: colors.navy, borderRadius: radius.xl - 4, padding: space.xl, gap: 4, overflow: 'hidden' },
-  glow: {
-    position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    top: -120,
-    right: -80,
-    backgroundColor: colors.cyan,
-    opacity: 0.16,
-  },
   actions: { flexDirection: 'row', gap: space.sm, marginTop: space.lg },
-  addMoney: { flex: 1, paddingHorizontal: space.sm, backgroundColor: colors.cyan, borderColor: colors.cyan },
-  withdraw: { flex: 1, paddingHorizontal: space.sm, backgroundColor: 'rgba(255,255,255,0.14)', borderColor: 'transparent' },
+  addMoney: { flex: 1, paddingHorizontal: space.xs, backgroundColor: colors.highlight, borderColor: colors.highlight },
+  withdraw: { flex: 1, paddingHorizontal: space.xs, backgroundColor: 'rgba(255,255,255,0.14)', borderColor: 'transparent' },
   list: { backgroundColor: colors.card, borderRadius: radius.lg, overflow: 'hidden', ...shadow },
 });

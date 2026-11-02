@@ -1,7 +1,7 @@
 import { QueryClient, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 import { ApiError } from '@/api/errors';
-import type { TransactionDirection } from '@/api/types';
+import type { InsightRange, TransactionDirection } from '@/api/types';
 import { appConfig, auth, banks, investments, legal, loans, notifications, support, wallet } from '@/api/endpoints';
 
 export const keys = {
@@ -27,6 +27,9 @@ export const keys = {
   unread: ['notifications', 'unread'] as const,
   transactionList: (direction?: TransactionDirection) => ['transactions', 'list', direction ?? 'all'] as const,
   transaction: (id: string) => ['transactions', id] as const,
+  // Under 'transactions' / 'wallet', so the refreshes after money moves update these too.
+  insights: (range: string) => ['transactions', 'insights', range] as const,
+  recipients: ['wallet', 'recipients'] as const,
   banks: ['banks'] as const,
   investmentPlans: ['investments', 'plans'] as const,
   investments: ['investments', 'mine'] as const,
@@ -80,6 +83,10 @@ export const useLoan = (id: string) => useQuery({ queryKey: keys.loan(id), query
  * Always refetched on mount and app focus: money arrives by bank transfer outside the app,
  * and a stale balance would tell a customer who just paid in that they can't repay.
  */
+export const useInsights = (range: InsightRange, enabled = true) =>
+  useQuery({ queryKey: keys.insights(range), queryFn: () => wallet.insights(range), enabled });
+export const useRecipients = (enabled = true) =>
+  useQuery({ queryKey: keys.recipients, queryFn: wallet.recipients, enabled });
 export const useWallet = (enabled = true) =>
   useQuery({ queryKey: keys.wallet, queryFn: wallet.summary, enabled, staleTime: 0 });
 export const useBanks = () => useQuery({ queryKey: keys.banks, queryFn: banks.list, staleTime: 6 * 3600_000 });

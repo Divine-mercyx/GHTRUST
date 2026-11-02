@@ -88,6 +88,9 @@ def _test_env(monkeypatch):
     monkeypatch.setenv("MONNIFY_CONTRACT_CODE", "1234567890")
     monkeypatch.setenv("ZEST_AUTH_ENCRYPTION_IV", "3A4CD38XVS621KZ6")
     monkeypatch.setenv("SMS_MOCK", "true")
+    # Never send real texts from a developer's backend/.env (Dojah / Termii keys).
+    monkeypatch.setenv("SMS_PROVIDER", "")
+    monkeypatch.setenv("DOJAH_SENDER_ID", "")
     # Never inherit a developer's real Stanbic sandbox keys from backend/.env: tests that
     # need Stanbic switch it on themselves, with every HTTP call patched.
     monkeypatch.setenv("STANBIC_MOCK", "true")

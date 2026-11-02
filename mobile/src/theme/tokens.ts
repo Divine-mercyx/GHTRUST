@@ -38,11 +38,19 @@ export const colors = {
   pendingBg: '#FDF3DF',
   slate: '#64748B',
   slateFill: '#EEF1F6',
+
+  // Gold highlight (the 2026 refresh): quick-action pills, the active tab and selected
+  // chips. Always with navy text on it, never white.
+  highlight: '#FFD13B',
+  highlightSoft: '#FFF4CC',
+  // Navy card gradient stops (see components/NavyCard).
+  navyDeep: '#132257',
+  navyBright: '#2C4A9A',
 } as const;
 
 export const space = { xxs: 4, xs: 8, sm: 12, md: 16, lg: 20, xl: 24, xxl: 32, xxxl: 48 } as const;
 
-export const radius = { sm: 10, md: 14, lg: 20, xl: 28, pill: 999 } as const;
+export const radius = { sm: 10, md: 14, lg: 24, xl: 32, pill: 999 } as const;
 
 export const font = {
   regular: 'Montserrat_400Regular',
@@ -71,11 +79,11 @@ export const shadow: ViewStyle = Platform.select({
   ios: {
     shadowColor: colors.navy,
     shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 8 },
   },
-  android: { elevation: 2 },
-  default: { boxShadow: '0 1px 3px rgba(27,47,107,.06), 0 8px 24px rgba(27,47,107,.06)' },
+  android: { elevation: 3 },
+  default: { boxShadow: '0 8px 24px rgba(27,47,107,.08)' },
 }) as ViewStyle;
 
 /** Minimum touch target (Apple HIG 44pt / Material 48dp). */

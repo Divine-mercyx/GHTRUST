@@ -12,7 +12,17 @@ from sqlalchemy.orm import selectinload
 from app.core.config import settings
 from app.core.errors import AppError, ErrorCode
 from app.modules.loans.audit_service import ApplicationAuditService
-from app.modules.loans.constants import DOCUMENT_LABELS, LOAN_PRODUCT_SEED
+from app.modules.loans.constants import (
+    CLUSTER_LOAN,
+    DOC_COLLATERAL_ORIGINAL,
+    DOC_GUARANTOR_ID,
+    DOC_GUARANTOR_PHOTO,
+    DOCUMENT_LABELS,
+    LOAN_PRODUCT_SEED,
+    LPO_LOAN,
+    MAX_GROUP_MEMBERS,
+    SECURITY_DOCUMENT_TYPES,
+)
 from app.modules.loans.models import (
     ApplicationCollateral,
     ApplicationDocument,
@@ -1048,11 +1058,26 @@ class LoanService:
             if not form.get(field):
                 errors.append(f"Missing universal form field: {field}")
 
-        if not application.guarantors:
-            errors.append("At least one guarantor is required")
-
         uploaded_types = {d.document_type for d in application.documents}
+        rules = application.product.eligibility_rules or {}
+        security_from = rules.get("security_from_amount")
+        if security_from is None:
+            if not application.guarantors:
+                errors.append("At least one guarantor is required")
+        else:
+            # A guarantor OR collateral, and only from this amount up (Business loan).
+            amount = Decimal(str(application.requested_amount or form.get("requested_amount") or 0))
+            has_guarantor = bool(application.guarantors) and {DOC_GUARANTOR_ID, DOC_GUARANTOR_PHOTO} <= uploaded_types
+            has_collateral = DOC_COLLATERAL_ORIGINAL in uploaded_types
+            if amount >= Decimal(str(security_from)) and not (has_guarantor or has_collateral):
+                errors.append(
+                    f"For loans of ₦{int(security_from):,} and above, add a guarantor with their ID and photo, "
+                    "or upload your collateral documents"
+                )
+
         for doc_type in application.product.required_document_types:
+            if security_from is not None and doc_type in SECURITY_DOCUMENT_TYPES:
+                continue  # checked above as "guarantor or collateral"
             if doc_type not in uploaded_types:
                 label = DOCUMENT_LABELS.get(doc_type, doc_type)
                 errors.append(f"Missing document: {label}")
@@ -1084,11 +1109,22 @@ class LoanService:
         elif code == "asset_loan":
             if not data.get("asset_description") or not data.get("asset_value"):
                 errors.append("Asset description and value are required for asset loan")
+        elif code == LPO_LOAN:
+            if not data.get("issuing_organisation") or not data.get("contract_value"):
+                errors.append("LPO details are required: the issuing organisation and the contract value")
+        elif code == CLUSTER_LOAN:
+            size = int(data.get("group_size") or 0)
+            if not data.get("group_name") or not data.get("group_leader_name"):
+                errors.append("Group details are required: the group's name and its leader")
+            if not 2 <= size <= MAX_GROUP_MEMBERS:
+                errors.append(f"A group needs between 2 and {MAX_GROUP_MEMBERS} members")
 
         return errors
 
     def _document_checklist(self, application: LoanApplication) -> list[DocumentChecklistItem]:
         uploaded = {d.document_type: d for d in application.documents}
+        # "Guarantor or collateral" products: those documents are offered, not each required.
+        either_or = (application.product.eligibility_rules or {}).get("security_from_amount") is not None
         checklist: list[DocumentChecklistItem] = []
         for doc_type in application.product.required_document_types:
             doc = uploaded.get(doc_type)
@@ -1096,7 +1132,7 @@ class LoanService:
                 DocumentChecklistItem(
                     document_type=doc_type,
                     label=DOCUMENT_LABELS.get(doc_type, doc_type),
-                    required=True,
+                    required=not (either_or and doc_type in SECURITY_DOCUMENT_TYPES),
                     uploaded=doc is not None,
                     status=doc.status if doc else None,
                     document_id=doc.id if doc else None,

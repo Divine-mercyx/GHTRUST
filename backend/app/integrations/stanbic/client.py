@@ -414,8 +414,10 @@ class StanbicClient:
         account_number: str,
         account_name: str,
         narration: str,
+        source_narration: str | None = None,
         currency: str = "NGN",
     ) -> DisbursementResult:
+        """`narration` is what the recipient sees; `source_narration` (default: the same) our statement."""
         if self._use_mock:
             return DisbursementResult(
                 reference=reference,
@@ -440,7 +442,7 @@ class StanbicClient:
                 "srcAcctName": "GH Trust MFB",
                 "srcAcctNum": self.settlement_account_number,
                 "transAmount": str(amount),
-                "srcAcctNarration": narration[:30],
+                "srcAcctNarration": (source_narration or narration)[:30],
                 "destAcctName": account_name,
                 "destAcctNum": account_number,
                 "destAcctNarration": narration[:30],

@@ -126,12 +126,12 @@ export function AppSidebar({ collapsed, pinned, floating, onTogglePin, onNavigat
         <div className="flex items-center h-9">
           <div
             className={clsx(
-              'rounded-lg bg-cyan flex items-center justify-center shrink-0 transition-[width,height,margin]',
+              'rounded-lg bg-white p-1 flex items-center justify-center shrink-0 transition-[width,height,margin]',
               collapsed ? 'h-7 w-7 ml-0' : 'h-9 w-9 ml-1',
             )}
             style={motion}
           >
-            <span className={clsx('font-bold text-white tracking-tight', collapsed ? 'text-[10px]' : 'text-[11px]')}>GH</span>
+            <img src="/logo.png" alt="GH Trust" className="h-full w-full object-contain" />
           </div>
           <div
             className={clsx('leading-tight min-w-0 overflow-hidden transition-[max-width,margin,opacity]', collapsed ? 'max-w-0 ml-0 opacity-0' : 'max-w-[160px] ml-3 opacity-100')}
