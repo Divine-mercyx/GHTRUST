@@ -119,3 +119,53 @@ async def test_retry_job_leaves_fresh_signups_and_working_accounts_alone(api_cli
     with patch(CREATE, create):
         result = await _run_retry_job(db_session, monkeypatch)
     assert result["checked"] == 0
+
+
+async def test_opening_the_wallet_finishes_a_missing_account(api_client, db_session, live_rail, fake_redis):
+    """Without waiting for the retry job (which needs the worker): the next GET /wallet asks again."""
+    down = AsyncMock(side_effect=PaymentRailError("Monnify unavailable", status_code=502))
+    with patch(CREATE, down), patch(LOOKUP, AsyncMock(side_effect=PaymentRailError("not found", status_code=404))):
+        tokens = await _register(api_client)
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+    with patch(CREATE, AsyncMock(return_value=_account())):
+        first = (await api_client.get("/api/v1/wallet", headers=headers)).json()
+    assert first["dva_account_number"] == "5012345678" and first["dva_status"] == "active"
+
+
+async def test_opening_the_wallet_asks_the_provider_at_most_every_two_minutes(
+    api_client, db_session, live_rail, fake_redis
+):
+    down = AsyncMock(side_effect=PaymentRailError("Monnify unavailable", status_code=502))
+    with patch(CREATE, down), patch(LOOKUP, AsyncMock(side_effect=PaymentRailError("not found", status_code=404))):
+        tokens = await _register(api_client)
+        headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+        calls = down.await_count
+        for _ in range(3):
+            res = await api_client.get("/api/v1/wallet", headers=headers)
+            assert res.status_code == 200  # a provider failure never breaks the wallet
+    assert down.await_count == calls + 1
+
+
+async def test_demo_signup_gets_an_account_number_when_payments_are_mocked(api_client, db_session, monkeypatch):
+    """Testers on a demo BVN need an account number to try Add money; mocked payments are safe."""
+    monkeypatch.setenv("DEMO_BVNS", TEST_BVN)
+    monkeypatch.setenv("DEMO_OTP", "482917")
+    refresh_settings()
+    from app.modules.payments.wallet_service import may_open_account
+
+    customer = Customer(bvn=TEST_BVN, phone_primary="+2348035794364", first_name="Demo", last_name="Applicant")
+    assert may_open_account(customer)  # MONNIFY_MOCK=true in tests
+
+
+async def test_demo_identity_never_reaches_a_live_provider(monkeypatch, live_rail):
+    monkeypatch.setenv("DEMO_BVNS", TEST_BVN)
+    for key in ("MONNIFY_API_KEY", "MONNIFY_SECRET_KEY", "MONNIFY_CONTRACT_CODE"):
+        monkeypatch.setenv(key, "live-looking")
+    refresh_settings()
+    from app.modules.payments.wallet_service import may_open_account
+
+    demo = Customer(bvn=TEST_BVN, phone_primary="+2348035794364", first_name="Demo", last_name="Applicant")
+    real = Customer(bvn="22299988877", phone_primary="+2348035794399", first_name="Ada", last_name="Obi")
+    assert not may_open_account(demo)
+    assert may_open_account(real)

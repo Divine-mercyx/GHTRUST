@@ -109,12 +109,17 @@ auto-retried, and unknown codes wait for the status check.
   fixed outbound IP needed on Railway.
 - **Retries:** 4 for an unsuccessful notification.
 - **Charges:** borne by GH Trust; the net amount settles into our pool at end of day.
+- **Credentials (Nov 2):** the `provider_id` / `provider_secret` go on the onboarding form too.
+  Use staging's own values for UAT; production gets new ones.
+- **Test funds (Nov 2):** 9202314303 holds test funds. A second account to transfer to is **ours
+  to supply** (any other Stanbic account available for UAT).
 
 ## Still needed from Stanbic
 
-1. A second test account (with bank code) to complete a successful transfer, and whether
-   9202314303 holds test funds (asked twice).
-2. Who receives the `provider_id` / `provider_secret`, privately.
+1. Name Enquiry on 9202314303 returns code 99 "Error getting customer credit details from the
+   db" since Nov 2 (worked Oct 20).
+2. Can a sandbox transfer go to any account number (another bank, or a non-UAT Stanbic account),
+   or only to UAT accounts? We need a destination for a successful transfer.
 3. Is the end-of-day settlement one lump sum, and is there a report or statement to reconcile it against?
 4. Fix: VA history must only return the calling client's prefix.
 5. Live prefix, live URLs and live keys (into Railway, never by email or chat).
@@ -124,7 +129,8 @@ auto-retried, and unknown codes wait for the status check.
 ## Our next steps
 
 1. Get the staging server live (Railway billing, then `docs/staging-stanbic.md`).
-2. Fill Stanbic's onboarding form with the staging callback URLs.
+2. Fill Stanbic's onboarding form with the staging callback URLs **and** staging's
+   `provider_id` / `provider_secret`.
 3. Sign up a tester on staging and send Stanbic the 5960 number to credit.
 4. Agree float for same-day withdrawals with the business.
 

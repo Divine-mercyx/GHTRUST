@@ -9,6 +9,7 @@ refuses to run against an unmigrated database rather than building tables
 itself (the old ``create_all`` path let the schema drift from migrations).
 """
 
+import argparse
 import asyncio
 import sys
 from decimal import Decimal
@@ -94,7 +95,7 @@ async def _seed_by_name(session, model, rows: list[dict]) -> int:
     return created
 
 
-async def seed() -> None:
+async def seed(*, reset_demo_pins: bool = False) -> None:
     await ensure_migrated()
     name, email, phone = super_admin_config()
 
@@ -106,7 +107,7 @@ async def seed() -> None:
         investments = await seed_sample_plans(session)
         food = await _seed_by_name(session, FoodBasketPlan, FOOD_BASKET_PLANS)
         # After the super admin, so a staff number in DEMO_PHONES isn't made a customer.
-        demo = await seed_demo_customers(session)
+        demo = await seed_demo_customers(session, reset_pins=reset_demo_pins)
         await session.commit()
 
     print(
@@ -118,8 +119,15 @@ async def seed() -> None:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Seed reference data and configured accounts (safe to repeat).")
+    parser.add_argument(
+        "--reset-demo-pins",
+        action="store_true",
+        help="Put DEMO_LOGIN_PIN / DEMO_TRANSACTION_PIN back on the demo accounts (normally kept)",
+    )
+    args = parser.parse_args()
     try:
-        asyncio.run(seed())
+        asyncio.run(seed(reset_demo_pins=args.reset_demo_pins))
     except (SeedError, DemoSeedError) as exc:
         print(f"Seed aborted: {exc}", file=sys.stderr)
         sys.exit(1)

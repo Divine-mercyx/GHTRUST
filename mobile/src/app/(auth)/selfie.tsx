@@ -218,8 +218,8 @@ export default function LiveFaceCheck() {
   );
 }
 
-const OVAL_W = 250;
-const OVAL_H = 330;
+const OVAL_W = 280; // testers asked for a bigger oval (was 250 × 330)
+const OVAL_H = 370;
 const MASK = 900; // thick border around the oval darkens everything outside it
 
 /** Full-screen front camera with a face oval; prompts run and frames are captured automatically. */

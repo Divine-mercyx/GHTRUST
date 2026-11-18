@@ -239,8 +239,8 @@ async def run_retry_wallet_accounts(limit: int = 100) -> dict:
     """
     from datetime import timedelta
 
-    from app.core.demo import is_demo_bvn
     from app.modules.payments.models import CustomerWallet, DvaStatus
+    from app.modules.payments.wallet_service import may_open_account
     from app.modules.users.models import Customer, CustomerStatus
 
     if get_settings().active_payment_provider == "zest":
@@ -267,7 +267,7 @@ async def run_retry_wallet_accounts(limit: int = 100) -> dict:
         ).scalars().all()
         for customer_id in ids:
             customer = await db.get(Customer, customer_id)
-            if customer is None or is_demo_bvn(customer.bvn):
+            if customer is None or not may_open_account(customer):
                 continue
             try:
                 await WalletService(db).provision_payment_rail(customer, strict=False)

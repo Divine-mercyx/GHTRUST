@@ -94,7 +94,7 @@ phone. Set `DEMO_PHONES` to a number you control (not a staff number), `DEMO_OTP
 signs in with the fixed code (no SMS) as "Demo Customer", on any number of phones at
 once. On the live system money can't leave a demo account and staff sign-in never
 accepts the demo code. Give the number, code and PINs to the stores in the review notes.
-Re-running the seed resets the PINs if a reviewer changed them.
+Deploys keep a PIN someone changed on the demo account; `python scripts/seed.py --reset-demo-pins` puts the configured PINs back.
 
 Optional pilot tuning (defaults shown): `DOJAH_SELFIE_THRESHOLD=90`,
 `DOJAH_LIVENESS_MIN_PROBABILITY=0.5`, `DOJAH_SELFIE_MAX_ATTEMPTS=3`. Adjust only with the

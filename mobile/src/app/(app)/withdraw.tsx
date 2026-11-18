@@ -44,13 +44,17 @@ export default function SendMoney() {
   // One key per send attempt: a retry after a timeout replays, never pays out twice.
   const key = useRef(newIdempotencyKey());
 
-  const list = recipients.data ?? [];
+  // If the saved accounts can't load, the current payout account still works: sending
+  // without a recipient id pays it.
+  const payout = summary.data?.payout_account;
+  const fallback: PayoutRecipient[] = payout ? [{ ...payout, id: '', current: true, last_used_at: null }] : [];
+  const list = recipients.data ?? (recipients.isError ? fallback : []);
   const to = list.find((r) => r.id === chosen) ?? list.find((r) => r.current) ?? list[0];
   const narration = note.trim().replace(/\s+/g, ' ');
 
   const send = useMutation({
     mutationFn: (pin: string) =>
-      wallet.withdraw(Number(amount).toFixed(2), pin, key.current, to?.id, narration || undefined),
+      wallet.withdraw(Number(amount).toFixed(2), pin, key.current, to?.id || undefined, narration || undefined),
     onSuccess: () => {
       if (Platform.OS !== 'web')
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
@@ -109,7 +113,7 @@ export default function SendMoney() {
       </Screen>
     );
   }
-  if (summary.isError || !w || recipients.isError) {
+  if (summary.isError || !w || (recipients.isError && !list.length)) {
     return (
       <Screen edges={['bottom']}>
         <ErrorState
@@ -190,6 +194,12 @@ export default function SendMoney() {
       {send.error && !pinError && !insufficient ? <Banner message={messageFor(send.error)} /> : null}
       {insufficient ? <Banner tone="warning" message="Your balance changed. Check the amount and try again." /> : null}
       {remove.error ? <Banner message={messageFor(remove.error)} /> : null}
+      {recipients.isError ? (
+        <Banner
+          tone="warning"
+          message={`Couldn't load your saved accounts (${messageFor(recipients.error)}). You can still send to your current account. Pull down to try again.`}
+        />
+      ) : null}
 
       <Text variant="bodyStrong">Send to</Text>
       <ScrollView
