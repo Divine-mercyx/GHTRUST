@@ -13,6 +13,7 @@ import { useSession } from '@/auth/session';
 import { Button } from '@/components/Button';
 import { PinFlow, type PinStep } from '@/components/PinFlow';
 import { Text } from '@/components/Text';
+import { pinReset } from '@/lib/flags';
 import { keys } from '@/lib/queries';
 import { colors, space } from '@/theme/tokens';
 
@@ -30,7 +31,7 @@ const DONE: Record<PinAction, string> = {
 export default function PinActionScreen() {
   const { action } = useLocalSearchParams<{ action: PinAction }>();
   const queryClient = useQueryClient();
-  const { biometricAvailable, setBiometric } = useSession();
+  const { biometricAvailable, setBiometric, signOut } = useSession();
   const [done, setDone] = useState(false);
   const refreshMe = () => queryClient.invalidateQueries({ queryKey: keys.me });
   const bio = biometricAvailable ? biometricName(biometricAvailable) : 'biometrics';
@@ -81,6 +82,8 @@ export default function PinActionScreen() {
     },
   };
   const flow = flows[action];
+  // These start by asking for the sign-in PIN; someone who doesn't know it needs a way out.
+  const asksSignInPin = action === 'change-login' || action === 'enable-biometric' || action === 'reset-transaction';
 
   if (!flow) return null;
 
@@ -116,6 +119,18 @@ export default function PinActionScreen() {
           setDone(true);
         }}
       />
+      {asksSignInPin ? (
+        <Button
+          title="Forgot sign-in PIN?"
+          variant="ghost"
+          size="sm"
+          onPress={async () => {
+            // Prove it's you with an SMS code and your BVN, then choose a new PIN.
+            pinReset.start();
+            await signOut();
+          }}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

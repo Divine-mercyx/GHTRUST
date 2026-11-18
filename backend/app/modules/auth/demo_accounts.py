@@ -1,10 +1,11 @@
 """
 Demo customers for testers and app-store review (see app/core/demo.py).
 
-`scripts/seed.py` calls this. Each DEMO_PHONES number that isn't a staff member gets
-an open customer account, so it can sign in straight away with DEMO_OTP. Re-running
-resets the account's PINs to DEMO_LOGIN_PIN / DEMO_TRANSACTION_PIN (if set) and clears
-failed attempts, which undoes whatever the last tester changed.
+`scripts/seed.py` (every deploy) and API start-up call this. Each DEMO_PHONES number that
+isn't a staff member gets an open customer account, so it can sign in straight away with
+DEMO_OTP. A new account gets DEMO_LOGIN_PIN / DEMO_TRANSACTION_PIN (if set). Re-running
+clears failed attempts but keeps PINs a tester changed, so a deploy or restart never makes
+their PIN "wrong"; `scripts/seed.py --reset-demo-pins` puts the configured PINs back.
 """
 
 import secrets
@@ -38,8 +39,8 @@ def _demo_bvn(phone: str) -> str:
     return "000" + phone[-8:]
 
 
-async def seed_demo_customers(session: AsyncSession) -> list[str]:
-    """Create or reset a demo customer per DEMO_PHONES number. Returns the numbers seeded."""
+async def seed_demo_customers(session: AsyncSession, *, reset_pins: bool = False) -> list[str]:
+    """Create or refresh a demo customer per DEMO_PHONES number. Returns the numbers seeded."""
     s = get_settings()
     login_pin = _pin(s.demo_login_pin, LOGIN_PIN_LENGTH, "DEMO_LOGIN_PIN")
     transaction_pin = _pin(s.demo_transaction_pin, TRANSACTION_PIN_LENGTH, "DEMO_TRANSACTION_PIN")
@@ -68,10 +69,10 @@ async def seed_demo_customers(session: AsyncSession) -> list[str]:
             session.add(customer)
         else:
             customer.status = CustomerStatus.ACTIVE
-        if login_pin:
+        if login_pin and (reset_pins or not customer.login_pin_hash):
             customer.login_pin_hash = hash_pin(login_pin)
             customer.login_pin_set_at = now
-        if transaction_pin:
+        if transaction_pin and (reset_pins or not customer.transaction_pin_hash):
             customer.transaction_pin_hash = hash_pin(transaction_pin)
             customer.transaction_pin_set_at = now
         customer.login_pin_failed_attempts = 0

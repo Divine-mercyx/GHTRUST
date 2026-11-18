@@ -63,7 +63,12 @@ export default function Fund() {
   return summary.data.funding_mode === 'on_demand_dynamic' ? (
     <OnDemand amount={amount} setAmount={setAmount} switcher={switcher} />
   ) : (
-    <PermanentAccount w={summary.data} amount={amount} switcher={switcher} />
+    <PermanentAccount
+      w={summary.data}
+      amount={amount}
+      switcher={switcher}
+      retry={{ onPress: () => summary.refetch(), busy: summary.isRefetching }}
+    />
   );
 }
 
@@ -249,15 +254,28 @@ function Done() {
   );
 }
 
-function PermanentAccount({ w, amount, switcher }: { w: Wallet; amount: string; switcher: ReactNode }) {
+function PermanentAccount({
+  w,
+  amount,
+  switcher,
+  retry,
+}: {
+  w: Wallet;
+  amount: string;
+  switcher: ReactNode;
+  /** Reloading the wallet asks the server to finish setting up the account number. */
+  retry: { onPress: () => void; busy: boolean };
+}) {
   const me = useMe();
   if (!w.dva_account_number || w.dva_status !== 'active') {
     return (
-      <Screen edges={['bottom']}>
+      <Screen
+        edges={['bottom']}
+        footer={<Button title="Try again" variant="secondary" loading={retry.busy} onPress={retry.onPress} />}>
         {switcher}
         <Banner
-          tone="warning"
-          message="Your GH Trust account number isn't ready yet. Please try again shortly, or contact your branch."
+          tone="info"
+          message="We're still setting up your GH Trust account number. Tap Try again in a minute, or pay in with a debit card meanwhile."
         />
       </Screen>
     );

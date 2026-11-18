@@ -66,6 +66,17 @@ class TestSeed:
         rows = (await db_session.execute(query)).scalars().all()
         assert len(rows) == 1 and rows[0].login_pin_failed_attempts == 0
 
+    async def test_rerun_keeps_a_pin_the_tester_changed_unless_asked(self, db_session, demo_env):
+        """Every deploy and restart re-runs the seed: it mustn't make a tester's PIN "wrong"."""
+        await seed_demo_customers(db_session)
+        customer = (await db_session.execute(select(Customer).where(Customer.phone_primary == DEMO_E164))).scalar_one()
+        await SecurityService(db_session).change_login_pin(customer, "no-session", "250813", "480173")
+
+        await seed_demo_customers(db_session)
+        assert verify_pin("480173", customer.login_pin_hash)
+        await seed_demo_customers(db_session, reset_pins=True)
+        assert verify_pin("250813", customer.login_pin_hash)
+
     async def test_rejects_a_malformed_pin(self, db_session, demo_env, monkeypatch):
         monkeypatch.setenv("DEMO_LOGIN_PIN", "12")
         refresh_settings()

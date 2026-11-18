@@ -448,7 +448,9 @@ class AuthService:
         await wallets.ledger.get_or_create_wallet(customer.id)
         await self.db.commit()
 
-        if not is_demo_bvn(customer.bvn):  # a made-up identity mustn't reach the provider
+        from app.modules.payments.wallet_service import may_open_account
+
+        if may_open_account(customer):  # a made-up identity mustn't reach a real provider
             try:
                 await wallets.provision_payment_rail(customer, strict=False)
                 await self.db.commit()

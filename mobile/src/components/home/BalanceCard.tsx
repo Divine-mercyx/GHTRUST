@@ -1,7 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { memo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import type { Loan, Wallet } from '@/api/types';
 import { NavyCard, ON_NAVY } from '@/components/NavyCard';
@@ -28,7 +30,8 @@ type Pill = { label: string; icon: keyof typeof Ionicons.glyphMap; urgent?: bool
 
 /**
  * The navy balance card at the top of Home. With the wallet on it shows the wallet
- * balance (and what's owed on loans underneath); without it, the loan balance.
+ * balance, the account number to fund it (tap to copy) and what's owed on loans
+ * underneath; without it, the loan balance.
  * The gold pill on its edge says what matters next: a repayment, returns, or adding money.
  */
 export const BalanceCard = memo(function BalanceCard({
@@ -71,6 +74,8 @@ export const BalanceCard = memo(function BalanceCard({
           </Pressable>
         </View>
 
+        {walletEnabled && wallet ? <AccountLine wallet={wallet} /> : null}
+
         {walletEnabled && owed > 0 ? (
           <Pressable accessibilityRole="button" hitSlop={8} onPress={() => router.push('/loans')} style={styles.owed}>
             <Text variant="small" color={ON_NAVY.muted}>
@@ -87,6 +92,43 @@ export const BalanceCard = memo(function BalanceCard({
     </View>
   );
 });
+
+/** The wallet's account number (tap to copy), or that it's still being set up. */
+function AccountLine({ wallet }: { wallet: Wallet }) {
+  const [copied, setCopied] = useState(false);
+  const number = wallet.dva_account_number;
+  if (!number) {
+    return (
+      <Text variant="small" color={ON_NAVY.muted}>
+        Account number: setting up…
+      </Text>
+    );
+  }
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={copied ? 'Account number copied' : `Account number ${number.split('').join(' ')}, copy`}
+      hitSlop={8}
+      onPress={async () => {
+        await Clipboard.setStringAsync(number);
+        if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1800);
+      }}
+      style={styles.account}>
+      <Text variant="small" color={colors.white} style={styles.accountNumber} numberOfLines={1}>
+        {wallet.dva_bank_name ? `${wallet.dva_bank_name} · ` : ''}
+        {number}
+      </Text>
+      <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={14} color={copied ? colors.highlight : ON_NAVY.muted} />
+      {copied ? (
+        <Text variant="small" color={colors.highlight}>
+          Copied
+        </Text>
+      ) : null}
+    </Pressable>
+  );
+}
 
 function pillFor(next: Loan | undefined, expectedReturns: number, hidden: boolean, walletEnabled: boolean): Pill | null {
   if (next?.next_due_date) {
@@ -163,6 +205,8 @@ const styles = StyleSheet.create({
   balanceRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 48 },
   amount: { flexShrink: 1, fontSize: 36, lineHeight: 44 },
   owed: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' },
+  account: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', maxWidth: '100%' },
+  accountNumber: { fontFamily: font.semibold, letterSpacing: 0.5, flexShrink: 1 },
   owedSpacer: { height: 18 },
   pill: {
     position: 'absolute',

@@ -7,7 +7,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import get_settings, settings
+from app.core.demo import is_demo_bvn, is_demo_phone
 from app.core.errors import AppError, ErrorCode
 from app.integrations.payments.factory import get_payment_client
 from app.integrations.payments.schemas import PaymentRailError
@@ -24,7 +25,7 @@ from app.modules.payments.models import (
     WithdrawalStatus,
 )
 from app.models.base import TransactionStatus
-from app.modules.users.models import Customer
+from app.modules.users.models import Customer, CustomerStatus
 
 logger = structlog.get_logger()
 
@@ -42,6 +43,23 @@ def _active_provider() -> PaymentProvider:
 
 # What our own statement shows for every withdrawal; the recipient sees the customer's note instead.
 WITHDRAWAL_NARRATION = "GH Trust wallet withdrawal"
+
+
+def may_open_account(customer: Customer) -> bool:
+    """
+    Whether this customer can be given a wallet account number. A demo identity (made-up BVN or
+    tester phone) mustn't reach a real provider with its details, but it can when payments are
+    mocked, or with Stanbic's numbering, which sends nothing about the customer.
+    """
+    if not (is_demo_bvn(customer.bvn) or is_demo_phone(customer.phone_primary)):
+        return True
+    from app.modules.payments import stanbic_fvid
+
+    return not get_settings().payment_rail_enabled or stanbic_fvid.enabled()
+
+
+# How often opening the wallet may ask the provider again for a missing account number.
+ACCOUNT_RETRY_SECONDS = 120
 
 
 def mask_account_number(number: str) -> str:
@@ -92,6 +110,30 @@ class WalletService:
             "withdrawals_blocked_until": _blocked_until(customer),
         }
         return summary
+
+    async def ensure_account(self, customer: Customer, redis) -> None:
+        """
+        Give an active customer their missing account number when they open the wallet, at most
+        every ACCOUNT_RETRY_SECONDS, so it doesn't wait for the retry job (or depend on it running).
+        Never fails the request.
+        """
+        if (
+            customer.paystack_dva_account_number
+            or customer.status != CustomerStatus.ACTIVE
+            or self.provider == PaymentProvider.ZEST
+            or not may_open_account(customer)
+        ):
+            return
+        if not await redis.set(f"wallet:account_retry:{customer.id}", "1", ex=ACCOUNT_RETRY_SECONDS, nx=True):
+            return
+        customer_id = customer.id
+        try:
+            await self.provision_payment_rail(customer, strict=False)
+            await self.db.commit()
+        except Exception:
+            await self.db.rollback()
+            await self.db.refresh(customer)  # the rollback expired it
+            logger.exception("wallet_account_on_open_failed", customer_id=customer_id)
 
     async def provision_paystack(self, customer: Customer) -> Customer:
         """Provision payment rail (Monnify reserved account by default)."""

@@ -5,7 +5,7 @@ import re
 from fastapi import APIRouter, Header, Query, Request, status
 from fastapi.responses import HTMLResponse
 
-from app.core.deps import CurrentCustomer, DbSession
+from app.core.deps import CurrentCustomer, DbSession, RedisClient
 from app.core.errors import AppError
 from app.modules.auth.security_service import SecurityService
 from app.modules.payments.ledger_service import LedgerError, raise_ledger_http
@@ -32,8 +32,10 @@ router = APIRouter(prefix="/wallet", tags=["Wallet"])
 
 
 @router.get("", response_model=WalletSummaryResponse)
-async def get_wallet(customer: CurrentCustomer, db: DbSession) -> WalletSummaryResponse:
-    summary = await WalletService(db).get_wallet_summary(customer)
+async def get_wallet(customer: CurrentCustomer, db: DbSession, redis: RedisClient) -> WalletSummaryResponse:
+    service = WalletService(db)
+    await service.ensure_account(customer, redis)
+    summary = await service.get_wallet_summary(customer)
     return WalletSummaryResponse(**summary)
 
 
